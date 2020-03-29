@@ -25,7 +25,7 @@
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
 
-std::vector<float> raw_sensors_dists;
+std::vector<float> raw_sensors_dists(NB_NEURONS, 0);
 
 void updateLidarScan(sensor_msgs::LaserScan new_scan) {
 	raw_sensors_dists = new_scan.ranges;
@@ -104,7 +104,10 @@ int main (int argc, char * argv[]) {
 	int obstacle_distance = 2000; // dist of the nearest obstacle, in cm
 	unsigned int i, nearest_obstacle_angle;
 	//unsigned int us_sensors_angles[NB_US_SENSORS + NB_TOF_SENSORS]; // in deg
-	unsigned int lidar_sensors_angles[NB_MEASURES_LIDAR]; // in deg
+	std::vector<int> lidar_sensors_angles; // in deg
+	for(int i = 0; i < NB_NEURONS; i++) {
+		lidar_sensors_angles.push_back(i);
+	}
 
 	float a, d;
 	float brake_max = 6.5;//dm. Distance at which we start to brake, in decimeters!!!
@@ -114,11 +117,11 @@ int main (int argc, char * argv[]) {
 	float stop_max = 55;//cm. Distance at which we stop, in cm
 	float stop = stop_max;//cm. Distance at which we stop, in cm
   	float distanceCoeff = 1;
-	float* sensors_dists;
+	std::vector<float> sensors_dists(NB_NEURONS, 0);
 	
 	// Initialize nearest's obstacle in front of us
 	nearest_obstacle_angle = 0;
-	std::vector<float> pre_output;
+	std::vector<float> pre_output(NB_NEURONS, 0);
 
 	ros::NodeHandle n;
 	ros::Publisher obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
