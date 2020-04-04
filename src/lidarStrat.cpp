@@ -21,6 +21,7 @@
 #define CRITCIAL_DISTANCE_TRIG 120 // in mm
 #define LIDAR_DIST_OFFSET 80 // in mm, the lidar is much more deep inside the robot, vs the US/IR near the outside
 #define MAX_DISTANCE 6000 // in mm
+#define MIN_DISTANCE 1 // in mm
 
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
@@ -28,7 +29,15 @@
 std::vector<float> raw_sensors_dists(NB_NEURONS, 0);
 
 void updateLidarScan(sensor_msgs::LaserScan new_scan) {
-	raw_sensors_dists = new_scan.ranges;
+	for (int i = 0; i < NB_MEASURES_LIDAR ; i++) {
+		if (new_scan.intensities[i] == 0) {
+			// Unreliable, do not take into account
+			raw_sensors_dists[i] = MAX_DISTANCE;
+		}
+		else {
+			raw_sensors_dists[i] = new_scan.ranges[i] * 1000;//m to mm
+		}
+	}
 }
 
 unsigned int get_idx_of_max (const float vector[], const size_t len) {
@@ -64,8 +73,8 @@ float sin_card(float x) {
  * @param posX the distance, in meters
  **/
 void polar_to_cart(int &posX, int &posY, const float theta, const float distance) {
-        posX = (int)1000* distance*cos(theta * M_PI/180.f);
-        posY = (int)1000* distance*sin(theta * M_PI/180.f);
+        posX = (int) distance*cos(theta * M_PI/180.f);
+        posY = (int) distance*sin(theta * M_PI/180.f);
 }
 
 /**
@@ -109,7 +118,7 @@ int main (int argc, char * argv[]) {
 		lidar_sensors_angles.push_back(i);
 	}
 
-	float a, d;
+	float a = 1;
 	float brake_max = 6.5;//dm. Distance at which we start to brake, in decimeters!!!
 	float brake_min = 5;//dm. Distance at which we start to brake, in decimeters!!!
 	float brake = brake_max;//dm. Distance at which we start to brake, in decimeters!!!
@@ -148,7 +157,7 @@ int main (int argc, char * argv[]) {
 
 		// Update the values with a smoothing factor
 		for (i = 0; i < NB_MEASURES_LIDAR; i += 1) {
-			if (raw_sensors_dists[i] == 0) {
+			if (raw_sensors_dists[i] < MIN_DISTANCE) {
 				raw_sensors_dists[i] = (uint16_t) MAX_DISTANCE;
 			}
 			else if (raw_sensors_dists[i] > sensors_dists[i]) {
@@ -158,7 +167,7 @@ int main (int argc, char * argv[]) {
 				sensors_dists[i] = (uint16_t)floor((1. - a) * sensors_dists[i] + a * raw_sensors_dists[i]);
 			}
 
-			//printf("Smoothed uS sensors #%d: %d mm\n", i, sensors_dists[i]);
+			//std::cout << "Smoothed uS sensors n°" << i << ": " << sensors_dists[i] << std::endl;
 		}
 		//printf("\n\n");
 		
@@ -187,7 +196,7 @@ int main (int argc, char * argv[]) {
 			 */
 			float close_factor = 15.f;// min distance for complete stop?
 			float far_factor = 40.f;// distance from which the object is not taken into account?
-			d = angle_factor * ( (close_factor - (sensors_dists[i] - LIDAR_DIST_OFFSET) / close_factor) / far_factor + 1.);
+			float d = angle_factor * ( (close_factor - (sensors_dists[i] - LIDAR_DIST_OFFSET) / close_factor) / far_factor + 1.);
 
 			if (currentMostThreatening < d) {
 				obstacle_distance = sensors_dists[i];
@@ -248,6 +257,7 @@ int main (int argc, char * argv[]) {
 			strategy.output->speed_inhibition = 0;*/
 
 		// Now that the work is done on 'pre_output', actually output it
+		//std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at " << obstacle_distance << " mm " << std::endl;
 
 		geometry_msgs::Pose obstacle_pose;
 		int obstacle_x_in_mm;
@@ -256,6 +266,7 @@ int main (int argc, char * argv[]) {
 		obstacle_pose.position.x = obstacle_x_in_mm;
 		obstacle_pose.position.y = obstacle_y_in_mm;
 		obstacle_pose_pub.publish(obstacle_pose);
+		//std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " << obstacle_pose.position.y << std::endl;
 
 		//printf("Distance: %d cm @ %d deg-> Linear Speed Inhibition: %d\n", obstacle_distance, nearest_obstacle_angle, strategy.output->speed_inhibition);
 		
