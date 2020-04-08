@@ -10,6 +10,7 @@
 #include <fstream>
 #include <ros/ros.h>
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/LaserScan.h"
 
 #include "../include/lidarStrat.h"
@@ -22,6 +23,7 @@
 #define LIDAR_DIST_OFFSET 80 // in mm, the lidar is much more deep inside the robot, vs the US/IR near the outside
 #define MAX_DISTANCE 6000 // in mm
 #define MIN_DISTANCE 1 // in mm
+#define MIN_INTENSITY 20
 
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
@@ -30,7 +32,7 @@ std::vector<float> raw_sensors_dists(NB_NEURONS, 0);
 
 void updateLidarScan(sensor_msgs::LaserScan new_scan) {
 	for (int i = 0; i < NB_MEASURES_LIDAR ; i++) {
-		if (new_scan.intensities[i] == 0) {
+		if (new_scan.intensities[i] < MIN_INTENSITY) {
 			// Unreliable, do not take into account
 			raw_sensors_dists[i] = MAX_DISTANCE;
 		}
@@ -108,6 +110,7 @@ int main (int argc, char * argv[]) {
 	fflush(stdout);
 
 	ros::init(argc, argv, "lidarStrat");
+	ros::start();
 
 
 	int obstacle_distance = 2000; // dist of the nearest obstacle, in cm
@@ -127,6 +130,7 @@ int main (int argc, char * argv[]) {
 	float stop = stop_max;//cm. Distance at which we stop, in cm
   	float distanceCoeff = 1;
 	std::vector<float> sensors_dists(NB_NEURONS, 0);
+	ros::Rate loop_rate(10);
 	
 	// Initialize nearest's obstacle in front of us
 	nearest_obstacle_angle = 0;
@@ -134,6 +138,7 @@ int main (int argc, char * argv[]) {
 
 	ros::NodeHandle n;
 	ros::Publisher obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
+	ros::Publisher obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
 	ros::Subscriber lidar_sub = n.subscribe("scan", 1000, &updateLidarScan);
 
 	/*************************************************
@@ -263,15 +268,20 @@ int main (int argc, char * argv[]) {
 		int obstacle_x_in_mm;
 		int obstacle_y_in_mm;
 		polar_to_cart(obstacle_x_in_mm, obstacle_y_in_mm, nearest_obstacle_angle, obstacle_distance);
-		obstacle_pose.position.x = obstacle_x_in_mm;
-		obstacle_pose.position.y = obstacle_y_in_mm;
+		obstacle_pose.position.x = obstacle_x_in_mm/1000.f;
+		obstacle_pose.position.y = obstacle_y_in_mm/1000.f;
 		obstacle_pose_pub.publish(obstacle_pose);
+		geometry_msgs::PoseStamped obstacle_pose_stamped;
+		obstacle_pose_stamped.pose = obstacle_pose;
+		obstacle_pose_stamped.header.frame_id = "base_link";
+		obstacle_posestamped_pub.publish(obstacle_pose_stamped);
 		//std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " << obstacle_pose.position.y << std::endl;
 
 		//printf("Distance: %d cm @ %d deg-> Linear Speed Inhibition: %d\n", obstacle_distance, nearest_obstacle_angle, strategy.output->speed_inhibition);
 		
 		//usleep(30000); // No need to sleep, receiving packets does that
 		ros::spinOnce();
+		loop_rate.sleep();
 	}
 
 	// Print a message to let the user know the script exited cleanly
