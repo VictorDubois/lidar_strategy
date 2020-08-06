@@ -51,7 +51,7 @@ unsigned int get_idx_of_max(const float vector[], const size_t len)
 
 float sin_card(float x)
 {
-    if (x == 0)
+    if (x == 0.f)
     {
         return 1;
     }
@@ -87,8 +87,8 @@ void polar_to_cart(float& posX, float& posY, const float theta, const float dist
 //#define DEBUG_cart_to_polar
 void cart_to_polar(const float posX, const float posY, float& theta, float& distance)
 {
-    theta = ((180. / M_PI) * atan2((float)posX, (float)posY));
-    distance = sqrt((float)(posX * posX + posY * posY));
+    theta = (180. / M_PI) * atan2(posX, posY);
+    distance = sqrt(posX * posX + posY * posY);
 
     // fix angular ambiguity
     if (posY < 0)
@@ -143,12 +143,14 @@ int main(int argc, char* argv[])
     {
         // Modulate the stop/brake distance from other strats' inputs
 
-        float brake_max = 0.65;  // m. Distance at which we start to brake, (was in dm)
-        float brake_min = 0.5;   // m. Distance at which we start to brake, (was in dm)
-        float brake = brake_max; // m. Distance at which we start to brake, (was in dm)
-        float stop_min = 0.45 * distanceCoeff; // m. Distance at which we stop, (was in cm)
-        float stop_max = 0.55 * distanceCoeff; // m. Distance at which we stop, (was in cm)
-        float stop = stop_max;                 // m Distance at which we stop, (was in cm)
+        float slope_max = 0.3f;  // m. max slope of the braking distance modulation
+        float slope_min = 0.1f;  // m. min slope of the braking distance modulation
+        float slope = slope_max; // m. slope of the braking distance modulation
+        float half_stop_min
+          = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
+        float half_stop_max
+          = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
+        float half_stop = half_stop_max; // m distance at which we limit to half the full speed
 
         /*if (distanceCoeff != oldDistanceCoeff) {
                             std::cout << "Stop distance coeff read = " << distanceCoeff <<
@@ -157,14 +159,17 @@ int main(int argc, char* argv[])
            stop = " << stop << std::endl; fflush(stdout);
                     }*/
 
-        // Update the values with a smoothing factor
         for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             if (raw_sensors_dists[i] < MIN_DISTANCE)
             {
-                raw_sensors_dists[i] = MAX_DISTANCE;
+                sensors_dists[i] = MAX_DISTANCE;
             }
-            sensors_dists[i] = raw_sensors_dists[i];
+            else
+            {
+                sensors_dists[i] = raw_sensors_dists[i];
+            }
+
             // Smooth output
             /*else if (raw_sensors_dists[i] > sensors_dists[i]) {
               sensors_dists[i] = (1. - ALPHA) * sensors_dists[i] + ALPHA * raw_sensors_dists[i];
@@ -190,10 +195,10 @@ int main(int argc, char* argv[])
 
         // 1) Find the distance to the nearest obstacle and its relative position compared to the
         // robot
-        float currentMostThreatening = 0.;
+        float currentMostThreatening = 0.f;
         for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
-            float angle_factor = 1.0 - sin_card(((float)i) - 180.0);
+            float angle_factor = 1.0f - sin_card((i)-180.0f);
 
             /*
              * Output each sensor's obstacle distance on the output neural field
@@ -222,31 +227,16 @@ int main(int argc, char* argv[])
 
         // We modulate the intensity of the inhibition based on the angle at which the obstacle is
         // seen
-        float angle_factor = sin_card(((float)nearest_obstacle_angle) - 180.0);
-        stop = stop_min + (stop_max - stop_min) * angle_factor;
-        brake = brake_min + (brake_max - brake_min) * angle_factor;
+        float angle_factor = sin_card((nearest_obstacle_angle)-180.0f);
+        half_stop = half_stop_min + (half_stop_max - half_stop_min) * angle_factor;
+        slope = slope_min + (slope_max - slope_min) * angle_factor;
 
         //@TODO replace this in main strat
         // strategy.output->speed_inhibition = MAX_ALLOWED_SPEED * (50. * tanh((obstacle_distance -
         // middle) / slope) + 49) / 100.);
 
-        // if (obstacle_distance < CRITICAL_DISTANCE) {
-        //	emergency_stop[2] = 0.0;
-        //} else if(obstacle_distance >= CRITCIAL_DISTANCE_TRIG) {
-        // emergency_stop[2] = 1.0;
-        //}
-
-        // printf("Distance: %d mm @ %d deg-> Linear Speed Inhibition: %d \n", obstacle_distance,
-        // nearest_obstacle_angle, strategy.output->speed_inhibition);
-
-        /*	if (strategy.output->speed_inhibition > MAX_ALLOWED_SPEED)
-                        strategy.output->speed_inhibition = MAX_ALLOWED_SPEED;
-                if (strategy.output->speed_inhibition < 0)
-                        strategy.output->speed_inhibition = 0;*/
-
-        // Now that the work is done on 'pre_output', actually output it
         // std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at " <<
-        // obstacle_distance << " mm " << std::endl;
+        // obstacle_distance << " m " << std::endl;
 
         geometry_msgs::Pose obstacle_pose;
         float posX;
