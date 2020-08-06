@@ -4,5 +4,5 @@
 #define TRUE 1
 #define FALSE 0
 
-#define NB_MEASURES_LIDAR 360 
+#define NB_MEASURES_LIDAR 360
 #endif
