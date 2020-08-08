@@ -145,15 +145,6 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     // obstacle_pose.position.y << std::endl;
 }
 
-int main(int argc, char* argv[])
-{
-    LidarStrat* my_lidar_strat = new LidarStrat(argc, argv);
-
-    my_lidar_strat->run();
-
-    return 0;
-}
-
 LidarStrat::LidarStrat(int argc, char* argv[])
 {
     printf("[LIDAR] Begin main\n");

@@ -15,11 +15,12 @@ class LidarStrat
 {
 public:
     LidarStrat(int argc, char* argv[]);
+    LidarStrat();
     ~LidarStrat();
     void run();
+    static float speed_inhibition(float distance, float angle, float distanceCoeff);
 
 private:
-    float speed_inhibition(float distance, float angle, float distanceCoeff);
     std::vector<float> raw_sensors_dists;  // in m
     std::vector<int> lidar_sensors_angles; // in deg
     sensor_msgs::LaserScan obstacle_dbg;   // used to display debug stuff

@@ -143,6 +143,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/goal_strategy_node.cpp)
 add_executable(lidar_strategy_node 
+	src/main.cpp
 	src/lidarStrat.cpp
 )
 
