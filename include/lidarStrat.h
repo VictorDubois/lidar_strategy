@@ -5,11 +5,11 @@
 
 #define TRUE 1
 #define FALSE 0
-
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/LaserScan.h"
 #include <ros/ros.h>
+#include <vector>
 
 class LidarStrat
 {

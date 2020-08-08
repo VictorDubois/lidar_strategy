@@ -4,12 +4,12 @@
 
 //#define NB_MEASURES_LIDAR 360
 
-#define CRITICAL_DISTANCE 0.100      // in m
-#define CRITCIAL_DISTANCE_TRIG 0.120 // in m
+#define CRITICAL_DISTANCE 0.100f      // in m
+#define CRITCIAL_DISTANCE_TRIG 0.120f // in m
 #define LIDAR_DIST_OFFSET                                                                          \
-    0.080 // in m, the lidar is much more deep inside the robot, vs the US/IR near the outside
-#define MAX_DISTANCE 6.0 // in m
-#define MIN_DISTANCE 0.1 // in m
+    0.080f // in m, the lidar is much more deep inside the robot, vs the US/IR near the outside
+#define MAX_DISTANCE 6.0f // in m
+#define MIN_DISTANCE 0.1f // in m
 #define MIN_INTENSITY 10
 
 // The smoothing factor for the obstacles' intensity
@@ -18,7 +18,7 @@
 void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
     obstacle_dbg = new_scan;
-    for (int i = 0; i < NB_MEASURES_LIDAR; i++)
+    for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
     {
         if (new_scan.intensities[i] < MIN_INTENSITY || new_scan.ranges[i] < MIN_DISTANCE)
         {
@@ -55,7 +55,7 @@ float sin_card(float x)
         return 0;
     }
     // x =2.0* M_PI * x / 180;
-    x = M_PI * x / 180;
+    x = static_cast<float>(M_PI) * x / 180;
     return sin(x) / x;
 }
 
@@ -68,8 +68,8 @@ float sin_card(float x)
  **/
 void polar_to_cart(float& posX, float& posY, const float theta, const float distance)
 {
-    posX = distance * cos(theta * M_PI / 180.f);
-    posY = distance * sin(theta * M_PI / 180.f);
+    posX = distance * cosf(theta * static_cast<float>(M_PI) / 180.f);
+    posY = distance * sinf(theta * static_cast<float>(M_PI) / 180.f);
 }
 
 /**
@@ -82,7 +82,7 @@ void polar_to_cart(float& posX, float& posY, const float theta, const float dist
 //#define DEBUG_cart_to_polar
 void cart_to_polar(const float posX, const float posY, float& theta, float& distance)
 {
-    theta = (180. / M_PI) * atan2(posX, posY);
+    theta = (180.f / static_cast<float>(M_PI)) * atan2f(posX, posY);
     distance = sqrt(posX * posX + posY * posY);
 
     // fix angular ambiguity
@@ -133,8 +133,8 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     float posX;
     float posY;
     polar_to_cart(posX, posY, nearest_obstacle_angle, obstacle_distance);
-    obstacle_pose.position.x = posX;
-    obstacle_pose.position.y = posY;
+    obstacle_pose.position.x = static_cast<double>(posX);
+    obstacle_pose.position.y = static_cast<double>(posY);
     obstacle_pose_pub.publish(obstacle_pose);
     geometry_msgs::PoseStamped obstacle_pose_stamped;
     obstacle_pose_stamped.pose = obstacle_pose;
@@ -190,7 +190,7 @@ void LidarStrat::run()
     while (ros::ok())
     {
 
-        for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
+        for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             sensors_dists[i] = raw_sensors_dists[i];
 
@@ -216,13 +216,13 @@ void LidarStrat::run()
         // 0) Reset obstacle_distance & position
 
         float obstacle_distance = std::numeric_limits<float>::infinity();
-        unsigned int nearest_obstacle_angle = 0;
+        float nearest_obstacle_angle = 0;
 
         // 1) Find the distance to the most threatening obstacle and its relative position compared
         // to the robot
         float currentMostThreatening = std::numeric_limits<float>::infinity();
 
-        for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
+        for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             obstacle_dbg.intensities[i] = 1;
 
@@ -246,7 +246,7 @@ void LidarStrat::run()
                           << "\tdanger=" << danger << std::endl;*/
                 obstacle_distance = sensors_dists[i];
                 currentMostThreatening = danger;
-                nearest_obstacle_angle = i; // lidar_sensors_angles[i]; ?
+                nearest_obstacle_angle = static_cast<float>(i); // lidar_sensors_angles[i]; ?
             }
         }
 
