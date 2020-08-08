@@ -1,11 +1,7 @@
-#include "geometry_msgs/Pose.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "sensor_msgs/LaserScan.h"
-#include <ros/ros.h>
+
 
 #include "../include/lidarStrat.h"
 
-#define NB_NEURONS 360
 //#define NB_MEASURES_LIDAR 360
 
 #define CRITICAL_DISTANCE 0.100      // in m
@@ -19,11 +15,7 @@
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
 
-std::vector<float> raw_sensors_dists(NB_NEURONS, 0);
-
-sensor_msgs::LaserScan obstacle_dbg;
-
-void updateLidarScan(sensor_msgs::LaserScan new_scan)
+void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
     obstacle_dbg = new_scan;
     for (int i = 0; i < NB_MEASURES_LIDAR; i++)
@@ -108,7 +100,15 @@ void cart_to_polar(const float posX, const float posY, float& theta, float& dist
 #endif
 }
 
-float speed_inhibition(float distance, float angle, float distanceCoeff)
+/**
+ * @brief speed_inhibition the speed inhibition caused by an obstacle. For more information see the
+ * geogebra file
+ * @param distance the distance of the obstacle
+ * @param angle the angle of the obstacle
+ * @param distanceCoeff
+ * @return the speed inhibition coefficient (1 = full speed, 0 = stop)
+ */
+float LidarStrat::speed_inhibition(float distance, float angle, float distanceCoeff)
 {
     float slope_max = 0.3f;  // m. max slope of the braking distance modulation
     float slope_min = 0.1f;  // m. min slope of the braking distance modulation
@@ -119,17 +119,42 @@ float speed_inhibition(float distance, float angle, float distanceCoeff)
       = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
     float half_stop = half_stop_max; // m distance at which we limit to half the full speed
     // We modulate the intensity of the inhibition based on the angle at which the obstacle is
-    // seen
+    // seen: in front it is more dangerous than on the sides
     float angle_factor = sin_card((angle)-180.0f);
     half_stop = half_stop_min + (half_stop_max - half_stop_min) * angle_factor;
     slope = slope_min + (slope_max - slope_min) * angle_factor;
 
-    //@TODO replace this in main strat
     return (50.f * tanh((distance - half_stop) / slope) + 49.f) / 100.f;
 }
 
-// Entry point
+void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance)
+{
+    geometry_msgs::Pose obstacle_pose;
+    float posX;
+    float posY;
+    polar_to_cart(posX, posY, nearest_obstacle_angle, obstacle_distance);
+    obstacle_pose.position.x = posX;
+    obstacle_pose.position.y = posY;
+    obstacle_pose_pub.publish(obstacle_pose);
+    geometry_msgs::PoseStamped obstacle_pose_stamped;
+    obstacle_pose_stamped.pose = obstacle_pose;
+    obstacle_pose_stamped.header.frame_id
+      = "neato_laser"; // base_link for robot, neato_laser for logs/debug
+    obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+    // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
+    // obstacle_pose.position.y << std::endl;
+}
+
 int main(int argc, char* argv[])
+{
+    LidarStrat* my_lidar_strat = new LidarStrat(argc, argv);
+
+    my_lidar_strat->run();
+
+    return 0;
+}
+
+LidarStrat::LidarStrat(int argc, char* argv[])
 {
     printf("[LIDAR] Begin main\n");
     fflush(stdout);
@@ -137,44 +162,33 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "lidarStrat");
     ros::start();
 
-    float obstacle_distance = 2000; // dist of the nearest obstacle, in m
-    unsigned int nearest_obstacle_angle;
-    std::vector<int> lidar_sensors_angles; // in deg
-    for (int i = 0; i < NB_NEURONS; i++)
+    for (int i = 0; i < NB_MEASURES_LIDAR; i++)
     {
+        raw_sensors_dists.push_back(0);
         lidar_sensors_angles.push_back((i + 180) % 360); // conversion from loop index to degrees
         obstacle_dbg.intensities.push_back(0);
         obstacle_dbg.ranges.push_back(0);
     }
 
-    float distanceCoeff = 1;
-    std::vector<float> sensors_dists(NB_NEURONS, 0);
-    ros::Rate loop_rate(5);
-
-    // Initialize nearest's obstacle in front of us
-    nearest_obstacle_angle = 0;
-    std::vector<float> pre_output(NB_NEURONS, 0);
-
     ros::NodeHandle n;
-    ros::Publisher obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
-    ros::Publisher obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
-    ros::Publisher obstacle_posestamped_pub
+    obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
+    obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
+    obstacle_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
-    ros::Subscriber lidar_sub = n.subscribe("scan", 1000, &updateLidarScan);
+    lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+}
+
+void LidarStrat::run()
+{
+    float distanceCoeff = 1;
+    ros::Rate loop_rate(5);
+    std::vector<float> sensors_dists(NB_MEASURES_LIDAR, 0);
 
     /*************************************************
      *                   Main loop                   *
      *************************************************/
     while (ros::ok())
     {
-        // Modulate the stop/brake distance from other strats' inputs
-
-        /*if (distanceCoeff != oldDistanceCoeff) {
-                            std::cout << "Stop distance coeff read = " << distanceCoeff <<
-           std::endl; std::cout << "brake_max = " << brake_max << ", brake_min = " << brake_min <<
-           ", brake = " << brake << ", stop_min = " << stop_min << "stop_max = " << stop_max << ",
-           stop = " << stop << std::endl; fflush(stdout);
-                    }*/
 
         for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
@@ -198,13 +212,14 @@ int main(int argc, char* argv[])
          *   to a stop if too close
          */
 
-        // Linear modulation of the linear speed
+        // Modulation of the linear speed
         // 0) Reset obstacle_distance & position
 
-        obstacle_distance = 6.0;
+        float obstacle_distance = std::numeric_limits<float>::infinity();
+        unsigned int nearest_obstacle_angle = 0;
 
-        // 1) Find the distance to the nearest obstacle and its relative position compared to the
-        // robot
+        // 1) Find the distance to the most threatening obstacle and its relative position compared
+        // to the robot
         float currentMostThreatening = std::numeric_limits<float>::infinity();
 
         for (int i = 0; i < NB_MEASURES_LIDAR; i += 1)
@@ -221,8 +236,9 @@ int main(int argc, char* argv[])
               = speed_inhibition(sensors_dists[i], lidar_sensors_angles[i], distanceCoeff);
 
             obstacle_dbg.intensities[i] = danger;
-            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);// display
-            // angle factor
+
+            // display angle factor for debug
+            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
 
             if (currentMostThreatening > danger)
             {
@@ -234,28 +250,10 @@ int main(int argc, char* argv[])
             }
         }
 
-        /*
-         * 2) Compute linear speed
-         * TODO: modulate the speed by the angle of the us sensors!
-         */
-
         std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
 
-        geometry_msgs::Pose obstacle_pose;
-        float posX;
-        float posY;
-        polar_to_cart(posX, posY, nearest_obstacle_angle, obstacle_distance);
-        obstacle_pose.position.x = posX;
-        obstacle_pose.position.y = posY;
-        obstacle_pose_pub.publish(obstacle_pose);
-        geometry_msgs::PoseStamped obstacle_pose_stamped;
-        obstacle_pose_stamped.pose = obstacle_pose;
-        obstacle_pose_stamped.header.frame_id
-          = "base_link"; // "neato_laser"; // base_link for robot, neato_laser for logs/debug
-        obstacle_posestamped_pub.publish(obstacle_pose_stamped);
-        std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " << obstacle_pose.position.y
-                  << std::endl;
+        sendObstaclePose(nearest_obstacle_angle, obstacle_distance);
 
         obstacle_danger_debuger.publish(obstacle_dbg);
 
@@ -268,9 +266,7 @@ int main(int argc, char* argv[])
 
     // Print a message to let the user know the script exited cleanly
     printf("Obstacles script exited cleanly\n");
-
-    return 0;
 }
 
-#undef NB_NEURONS
+//#undef NB_NEURONS
 #undef ALPHA
