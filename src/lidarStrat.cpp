@@ -1,4 +1,4 @@
-
+#include <utility>
 
 #include "../include/lidarStrat.h"
 
@@ -227,53 +227,55 @@ void LidarStrat::ClosestPointOfSegment(const float x,
     }
 }
 
+size_t LidarStrat::computeMostThreatening(const std::vector<std::pair<float, float>> points,
+                                          float distanceCoeff)
+{
+    size_t currentMostThreateningId = 0;
+
+    // 1) Find the distance to the most threatening obstacle and its relative position compared
+    // to the robot
+    float currentMostThreatening = std::numeric_limits<float>::infinity();
+
+    for (size_t i = 0; i < points.size(); i++)
+    {
+
+        float danger = speed_inhibition(points[i].first, points[i].second, distanceCoeff);
+
+        // obstacle_dbg.intensities[i] = danger;
+
+        // display angle factor for debug
+        // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
+
+        if (currentMostThreatening > danger)
+        {
+            std::cout << "distance = " << points[i].first << "\tangle = " << points[i].second
+                      << "\tdanger=" << danger << std::endl;
+            // obstacle_distance = point.first;
+            currentMostThreatening = danger;
+            currentMostThreateningId = i;
+            // nearest_obstacle_angle = point.second; // lidar_sensors_angles[i]; ?
+        }
+    }
+    return currentMostThreateningId;
+}
+
 void LidarStrat::run()
 {
     float distanceCoeff = 1;
     ros::Rate loop_rate(5);
-    std::vector<float> sensors_dists(NB_MEASURES_LIDAR, 0);
+    std::vector<float> sensors_dists;
 
     /*************************************************
      *                   Main loop                   *
      *************************************************/
     while (ros::ok())
     {
+        std::vector<std::pair<float, float>> obstacles;
 
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
-            sensors_dists[i] = raw_sensors_dists[i];
-
-            // Smooth output
-            /*else if (raw_sensors_dists[i] > sensors_dists[i]) {
-              sensors_dists[i] = (1. - ALPHA) * sensors_dists[i] + ALPHA * raw_sensors_dists[i];
-                              }
-                              else {
-              sensors_dists[i] = (1. - ALPHA) * sensors_dists[i] + ALPHA * raw_sensors_dists[i];
-            }*/
-
-            // std::cout << "Smoothed uS sensors n°" << i << ": " << sensors_dists[i] << std::endl;
-        }
-
-        /*
-         * Reactive approach to obstacles:
-         * - Simplified: obstacles on the right, left or both, output on the neural field
-         * - Linear speed is linearly modulated by the distance of the obstacle and it comes
-         *   to a stop if too close
-         */
-
-        // Modulation of the linear speed
-        // 0) Reset obstacle_distance & position
-
-        float obstacle_distance = std::numeric_limits<float>::infinity();
-        float nearest_obstacle_angle = 0;
-
-        // 1) Find the distance to the most threatening obstacle and its relative position compared
-        // to the robot
-        float currentMostThreatening = std::numeric_limits<float>::infinity();
-
-        for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
-        {
-            obstacle_dbg.intensities[i] = 1;
+            obstacle_dbg.intensities[i]
+              = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
 
             // Disable detection from behind
             if (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)
@@ -281,33 +283,21 @@ void LidarStrat::run()
                 continue;
             }
 
-            float danger
-              = speed_inhibition(sensors_dists[i], lidar_sensors_angles[i], distanceCoeff);
-
-            obstacle_dbg.intensities[i] = danger;
-
-            // display angle factor for debug
-            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
-
-            if (currentMostThreatening > danger)
-            {
-                /*std::cout << "distance = " << sensors_dists[i] << "\tangle = " << i
-                          << "\tdanger=" << danger << std::endl;*/
-                obstacle_distance = sensors_dists[i];
-                currentMostThreatening = danger;
-                nearest_obstacle_angle = static_cast<float>(i); // lidar_sensors_angles[i]; ?
-            }
+            obstacles.push_back(std::make_pair<float, float>(
+              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
         }
+
+        size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff);
+
+        float obstacle_distance = obstacles[most_threateningId].first;
+        float nearest_obstacle_angle = obstacles[most_threateningId].second;
 
         std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
 
-        sendObstaclePose(nearest_obstacle_angle, obstacle_distance);
+        sendObstaclePose(nearest_obstacle_angle + 180, obstacle_distance);
 
         obstacle_danger_debuger.publish(obstacle_dbg);
-
-        // printf("Distance: %d cm @ %d deg-> Linear Speed Inhibition: %d\n",
-        // obstacle_distance, nearest_obstacle_angle, strategy.output->speed_inhibition);
 
         ros::spinOnce();
         loop_rate.sleep();

@@ -40,6 +40,8 @@ private:
                                       const float y2,
                                       float& xx,
                                       float& yy);
+    size_t computeMostThreatening(const std::vector<std::pair<float, float>> points,
+                                  float distanceCoeff);
 
     ros::Publisher obstacle_pose_pub;
     ros::Publisher obstacle_danger_debuger;
