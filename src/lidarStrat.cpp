@@ -169,6 +169,64 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
 }
 
+void LidarStrat::ClosestPointOfSegment(const Position& currentPose,
+                                       const Position& segment1,
+                                       const Position& segment2,
+                                       Position& closestPoint)
+{
+    float xx, yy;
+    ClosestPointOfSegment(currentPose.getX(),
+                          currentPose.getY(),
+                          segment1.getX(),
+                          segment1.getY(),
+                          segment2.getX(),
+                          segment2.getY(),
+                          xx,
+                          yy);
+    closestPoint.setX(xx);
+    closestPoint.setY(yy);
+}
+
+// Thanks to https://stackoverflow.com/a/6853926/10680963
+void LidarStrat::ClosestPointOfSegment(const float x,
+                                       const float y,
+                                       const float x1,
+                                       const float y1,
+                                       const float x2,
+                                       const float y2,
+                                       float& xx,
+                                       float& yy)
+{
+    float A = x - x1;
+    float B = y - y1;
+    float C = x2 - x1;
+    float D = y2 - y1;
+
+    float dot = A * C + B * D;
+    float len_sq = C * C + D * D;
+    float param = -1;
+    if (len_sq != 0.f) // in case of 0 length line
+    {
+        param = dot / len_sq;
+    }
+
+    if (param < 0)
+    {
+        xx = x1;
+        yy = y1;
+    }
+    else if (param > 1)
+    {
+        xx = x2;
+        yy = y2;
+    }
+    else
+    {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+}
+
 void LidarStrat::run()
 {
     float distanceCoeff = 1;

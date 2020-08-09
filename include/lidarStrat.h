@@ -11,6 +11,8 @@
 #include <ros/ros.h>
 #include <vector>
 
+#include "Krabi/position.h"
+
 class LidarStrat
 {
 public:
@@ -26,6 +28,18 @@ private:
     sensor_msgs::LaserScan obstacle_dbg;   // used to display debug stuff
     void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
+    void static ClosestPointOfSegment(const Position& currentPose,
+                                      const Position& segment1,
+                                      const Position& segment2,
+                                      Position& closestPoint);
+    void static ClosestPointOfSegment(const float x,
+                                      const float y,
+                                      const float x1,
+                                      const float y1,
+                                      const float x2,
+                                      const float y2,
+                                      float& xx,
+                                      float& yy);
 
     ros::Publisher obstacle_pose_pub;
     ros::Publisher obstacle_danger_debuger;
