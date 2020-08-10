@@ -6,6 +6,7 @@
 #define TRUE 1
 #define FALSE 0
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseArray.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/LaserScan.h"
 #include <ros/ros.h>
@@ -16,6 +17,7 @@
 
 class LidarStrat
 {
+
 public:
     LidarStrat(int argc, char* argv[]);
     LidarStrat();
@@ -24,9 +26,13 @@ public:
     static float speed_inhibition(float distance, float angle, float distanceCoeff);
 
 private:
-    std::vector<float> raw_sensors_dists;  // in m
-    std::vector<int> lidar_sensors_angles; // in deg
-    sensor_msgs::LaserScan obstacle_dbg;   // used to display debug stuff
+    typedef std::pair<float, float> PolarPosition; // distance, angle
+    std::vector<float> raw_sensors_dists;          // in m
+    std::vector<int> lidar_sensors_angles;         // in deg
+    std::vector<PolarPosition> aruco_obstacles;
+    PositionPlusAngle currentPose;
+    sensor_msgs::LaserScan obstacle_dbg; // used to display debug stuff
+
     void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
     void ClosestPointOfSegment(const Position& segment1,
@@ -40,17 +46,17 @@ private:
                                       const float y2,
                                       float& xx,
                                       float& yy);
-    size_t computeMostThreatening(const std::vector<std::pair<float, float>> points,
-                                  float distanceCoeff);
+    size_t computeMostThreatening(const std::vector<PolarPosition> points, float distanceCoeff);
 
     void updateCurrentPose(geometry_msgs::Pose newPose);
+    void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
 
     ros::Publisher obstacle_pose_pub;
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
     ros::Subscriber lidar_sub;
     ros::Subscriber current_pose_sub;
-    PositionPlusAngle currentPose;
+    ros::Subscriber aruco_obstacles_sub;
 };
 
 #endif

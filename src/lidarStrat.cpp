@@ -15,6 +15,11 @@
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
 
+#ifndef MAX
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
 {
     currentPose = PositionPlusAngle(newPose);
@@ -107,6 +112,27 @@ void cart_to_polar(const float posX, const float posY, float& theta, float& dist
 #endif
 }
 
+void LidarStrat::updateArucoObstacles(geometry_msgs::PoseArray newPoses)
+{
+    aruco_obstacles.clear();
+    for (auto pose : newPoses.poses)
+    {
+        float theta, distance;
+        cart_to_polar(currentPose.getPosition().getX() - static_cast<float>(pose.position.x),
+                      currentPose.getPosition().getY() - static_cast<float>(pose.position.y),
+                      theta,
+                      distance);
+
+        // the center of the aruco is probably farther than the edge of the robot
+        distance = MAX(0, distance - 0.2f);
+
+        aruco_obstacles.push_back(
+          std::make_pair<float, float>(static_cast<float>(distance), static_cast<float>(theta)));
+
+        std::cout << "arucoObstacle: distance = " << distance << ", theta = " << theta << std::endl;
+    }
+}
+
 /**
  * @brief speed_inhibition the speed inhibition caused by an obstacle. For more information see the
  * geogebra file
@@ -167,6 +193,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
         obstacle_dbg.intensities.push_back(0);
         obstacle_dbg.ranges.push_back(0);
     }
+    aruco_obstacles.clear();
 
     ros::NodeHandle n;
     obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
@@ -175,6 +202,8 @@ LidarStrat::LidarStrat(int argc, char* argv[])
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
     current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
+    aruco_obstacles_sub
+      = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
 }
 
 void LidarStrat::ClosestPointOfSegment(const Position& segment1,
@@ -235,7 +264,7 @@ void LidarStrat::ClosestPointOfSegment(const float x,
     std::cout << "xx = " << xx << ", yy = " << yy << std::endl;
 }
 
-size_t LidarStrat::computeMostThreatening(const std::vector<std::pair<float, float>> points,
+size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> points,
                                           float distanceCoeff)
 {
     size_t currentMostThreateningId = 0;
@@ -275,7 +304,7 @@ void LidarStrat::run()
      *************************************************/
     while (ros::ok())
     {
-        std::vector<std::pair<float, float>> obstacles;
+        std::vector<PolarPosition> obstacles;
 
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
@@ -313,6 +342,8 @@ void LidarStrat::run()
               static_cast<float>(distance), static_cast<float>(theta - currentPose.getAngle())));
             // @Todo check sign of angle
         }
+
+        obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff);
 
