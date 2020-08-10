@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "Krabi/position.h"
+#include "Krabi/positionPlusAngle.h"
 
 class LidarStrat
 {
@@ -28,10 +29,9 @@ private:
     sensor_msgs::LaserScan obstacle_dbg;   // used to display debug stuff
     void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
-    void static ClosestPointOfSegment(const Position& currentPose,
-                                      const Position& segment1,
-                                      const Position& segment2,
-                                      Position& closestPoint);
+    void ClosestPointOfSegment(const Position& segment1,
+                               const Position& segment2,
+                               Position& closestPoint);
     void static ClosestPointOfSegment(const float x,
                                       const float y,
                                       const float x1,
@@ -43,10 +43,14 @@ private:
     size_t computeMostThreatening(const std::vector<std::pair<float, float>> points,
                                   float distanceCoeff);
 
+    void updateCurrentPose(geometry_msgs::Pose newPose);
+
     ros::Publisher obstacle_pose_pub;
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
     ros::Subscriber lidar_sub;
+    ros::Subscriber current_pose_sub;
+    PositionPlusAngle currentPose;
 };
 
 #endif

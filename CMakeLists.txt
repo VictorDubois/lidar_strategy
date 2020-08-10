@@ -146,7 +146,10 @@ add_executable(lidar_strategy_node
 	src/main.cpp
 	src/lidarStrat.cpp
 	src/Krabi/src/position.cpp
+	src/Krabi/src/positionPlusAngle.cpp
 	src/Krabi/src/vec2d.cpp
+	src/Krabi/src/vec3d.cpp
+	src/Krabi/src/angle.cpp
 	src/Krabi/src/distance.cpp
 )
 

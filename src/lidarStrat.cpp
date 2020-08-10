@@ -15,9 +15,16 @@
 // The smoothing factor for the obstacles' intensity
 #define ALPHA 1
 
+void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
+{
+    currentPose = PositionPlusAngle(newPose);
+    std::cout << "updateCurrentPose: x = " << currentPose.getPosition().getX()
+              << ", y = " << currentPose.getPosition().getY() << std::endl;
+}
+
 void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
-    obstacle_dbg = new_scan;
+    // obstacle_dbg = new_scan;
     for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
     {
         if (new_scan.intensities[i] < MIN_INTENSITY || new_scan.ranges[i] < MIN_DISTANCE)
@@ -167,16 +174,16 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     obstacle_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+    current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
 }
 
-void LidarStrat::ClosestPointOfSegment(const Position& currentPose,
-                                       const Position& segment1,
+void LidarStrat::ClosestPointOfSegment(const Position& segment1,
                                        const Position& segment2,
                                        Position& closestPoint)
 {
     float xx, yy;
-    ClosestPointOfSegment(currentPose.getX(),
-                          currentPose.getY(),
+    ClosestPointOfSegment(0, // currentPose.getPosition().getX(),
+                          0, // currentPose.getPosition().getY(),
                           segment1.getX(),
                           segment1.getY(),
                           segment2.getX(),
@@ -225,6 +232,7 @@ void LidarStrat::ClosestPointOfSegment(const float x,
         xx = x1 + param * C;
         yy = y1 + param * D;
     }
+    std::cout << "xx = " << xx << ", yy = " << yy << std::endl;
 }
 
 size_t LidarStrat::computeMostThreatening(const std::vector<std::pair<float, float>> points,
@@ -244,16 +252,13 @@ size_t LidarStrat::computeMostThreatening(const std::vector<std::pair<float, flo
         // obstacle_dbg.intensities[i] = danger;
 
         // display angle factor for debug
-        // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
 
         if (currentMostThreatening > danger)
         {
-            std::cout << "distance = " << points[i].first << "\tangle = " << points[i].second
-                      << "\tdanger=" << danger << std::endl;
-            // obstacle_distance = point.first;
+            // std::cout << "distance = " << points[i].first << "\tangle = " <<
+            // points[i].second << "\tdanger=" << danger << std::endl;
             currentMostThreatening = danger;
             currentMostThreateningId = i;
-            // nearest_obstacle_angle = point.second; // lidar_sensors_angles[i]; ?
         }
     }
     return currentMostThreateningId;
@@ -274,8 +279,9 @@ void LidarStrat::run()
 
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
-            obstacle_dbg.intensities[i]
-              = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
+            // obstacle_dbg.intensities[i]
+            //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
+            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
 
             // Disable detection from behind
             if (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)
@@ -283,8 +289,29 @@ void LidarStrat::run()
                 continue;
             }
 
+            /*obstacles.push_back(std::make_pair<float, float>(
+              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));*/
+        }
+
+        std::vector<std::pair<Position, Position>> maps_segments;
+        maps_segments.push_back(std::make_pair(Position(0, 0), Position(3000, 0)));
+        maps_segments.push_back(std::make_pair(Position(0, 2000), Position(3000, 2000)));
+        maps_segments.push_back(std::make_pair(Position(0, 0), Position(0, 2000)));
+        maps_segments.push_back(std::make_pair(Position(3000, 0), Position(3000, 2000)));
+
+        for (auto segment : maps_segments)
+        {
+            Position closestPoint;
+            ClosestPointOfSegment(currentPose.getPosition() - segment.first,
+                                  currentPose.getPosition() - segment.second,
+                                  closestPoint);
+
+            float theta, distance;
+            cart_to_polar(closestPoint.getX() / 1000, closestPoint.getY() / 1000, theta, distance);
+
             obstacles.push_back(std::make_pair<float, float>(
-              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
+              static_cast<float>(distance), static_cast<float>(theta - currentPose.getAngle())));
+            // @Todo check sign of angle
         }
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff);
@@ -296,6 +323,8 @@ void LidarStrat::run()
                   << obstacle_distance << " m " << std::endl;
 
         sendObstaclePose(nearest_obstacle_angle + 180, obstacle_distance);
+        // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
+        // frame
 
         obstacle_danger_debuger.publish(obstacle_dbg);
 
