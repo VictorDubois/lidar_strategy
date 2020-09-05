@@ -172,7 +172,7 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     geometry_msgs::PoseStamped obstacle_pose_stamped;
     obstacle_pose_stamped.pose = obstacle_pose;
     obstacle_pose_stamped.header.frame_id
-      = "neato_laser"; // base_link for robot, neato_laser for logs/debug
+      = "base_link"; // base_link for robot, neato_laser for logs/debug
     obstacle_posestamped_pub.publish(obstacle_pose_stamped);
     // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
     // obstacle_pose.position.y << std::endl;
@@ -318,8 +318,8 @@ void LidarStrat::run()
                 continue;
             }
 
-            /*obstacles.push_back(std::make_pair<float, float>(
-              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));*/
+            obstacles.push_back(std::make_pair<float, float>(
+              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
         }
 
         std::vector<std::pair<Position, Position>> maps_segments;
@@ -338,12 +338,12 @@ void LidarStrat::run()
             float theta, distance;
             cart_to_polar(closestPoint.getX() / 1000, closestPoint.getY() / 1000, theta, distance);
 
-            obstacles.push_back(std::make_pair<float, float>(
-              static_cast<float>(distance), static_cast<float>(theta - currentPose.getAngle())));
+            /*obstacles.push_back(std::make_pair<float, float>(
+              static_cast<float>(distance), static_cast<float>(theta - currentPose.getAngle())));*/
             // @Todo check sign of angle
         }
 
-        obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
+        //obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff);
 
@@ -353,7 +353,7 @@ void LidarStrat::run()
         std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
 
-        sendObstaclePose(nearest_obstacle_angle + 180, obstacle_distance);
+        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance);
         // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
         // frame
 
