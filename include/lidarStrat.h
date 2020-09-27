@@ -51,7 +51,6 @@ private:
     void updateCurrentPose(geometry_msgs::Pose newPose);
     void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
 
-    ros::Publisher obstacle_pose_pub;
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
     ros::Subscriber lidar_sub;

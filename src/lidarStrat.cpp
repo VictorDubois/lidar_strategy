@@ -168,7 +168,6 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     polar_to_cart(posX, posY, nearest_obstacle_angle, obstacle_distance);
     obstacle_pose.position.x = static_cast<double>(posX);
     obstacle_pose.position.y = static_cast<double>(posY);
-    obstacle_pose_pub.publish(obstacle_pose);
     geometry_msgs::PoseStamped obstacle_pose_stamped;
     obstacle_pose_stamped.pose = obstacle_pose;
     obstacle_pose_stamped.header.frame_id
@@ -196,7 +195,6 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     aruco_obstacles.clear();
 
     ros::NodeHandle n;
-    obstacle_pose_pub = n.advertise<geometry_msgs::Pose>("obstacle_pose", 1000);
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
     obstacle_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
