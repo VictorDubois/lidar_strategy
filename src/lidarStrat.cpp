@@ -160,7 +160,7 @@ float LidarStrat::speed_inhibition(float distance, float angle, float distanceCo
     return (50.f * tanh((distance - half_stop) / slope) + 49.f) / 100.f;
 }
 
-void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance)
+void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance, bool reverseGear)
 {
     geometry_msgs::Pose obstacle_pose;
     float posX;
@@ -172,7 +172,13 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     obstacle_pose_stamped.pose = obstacle_pose;
     obstacle_pose_stamped.header.frame_id
       = "base_link"; // base_link for robot, neato_laser for logs/debug
-    obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+
+    if (reverseGear) {
+        obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
+    }
+    else {
+        obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+    }
     // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
     // obstacle_pose.position.y << std::endl;
 }
@@ -197,7 +203,9 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     ros::NodeHandle n;
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
     obstacle_posestamped_pub
-      = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 1000);
+      = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_behind_posestamped_pub
+      = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
     current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
     aruco_obstacles_sub
@@ -263,7 +271,7 @@ void LidarStrat::ClosestPointOfSegment(const float x,
 }
 
 size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> points,
-                                          float distanceCoeff)
+                                          float distanceCoeff, bool reverseGear)
 {
     size_t currentMostThreateningId = 0;
 
@@ -273,8 +281,16 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
 
     for (size_t i = 0; i < points.size(); i++)
     {
+        // Only detect in front of the current direction
+        if ((!reverseGear && (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)) ||
+                (reverseGear && (lidar_sensors_angles[i] > 60 || lidar_sensors_angles[i] < 300)))
+        {
+            continue;
+        }
 
-        float danger = speed_inhibition(points[i].first, points[i].second, distanceCoeff);
+        float l_angle = reverseGear ? -points[i].second : points[i].second;
+
+        float danger = speed_inhibition(points[i].first, l_angle, distanceCoeff);
 
         // obstacle_dbg.intensities[i] = danger;
 
@@ -310,12 +326,6 @@ void LidarStrat::run()
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
 
-            // Disable detection from behind
-            if (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)
-            {
-                continue;
-            }
-
             obstacles.push_back(std::make_pair<float, float>(
               static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
         }
@@ -343,15 +353,20 @@ void LidarStrat::run()
 
         //obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
 
-        size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff);
+        size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, false);
+        size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, true);
 
         float obstacle_distance = obstacles[most_threateningId].first;
         float nearest_obstacle_angle = obstacles[most_threateningId].second;
-
         std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
+        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance, false);
 
-        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance);
+        obstacle_distance = obstacles[most_threateningBehindId].first;
+        nearest_obstacle_angle = obstacles[most_threateningBehindId].second;
+        std::cout << "nearest_obstacle_angle Behind = " << nearest_obstacle_angle << ", at "
+                  << obstacle_distance << " m " << std::endl;
+        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance, true);
         // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
         // frame
 

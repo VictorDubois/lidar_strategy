@@ -33,7 +33,7 @@ private:
     PositionPlusAngle currentPose;
     sensor_msgs::LaserScan obstacle_dbg; // used to display debug stuff
 
-    void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance);
+    void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance, bool reverseGear);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
     void ClosestPointOfSegment(const Position& segment1,
                                const Position& segment2,
@@ -46,13 +46,14 @@ private:
                                       const float y2,
                                       float& xx,
                                       float& yy);
-    size_t computeMostThreatening(const std::vector<PolarPosition> points, float distanceCoeff);
+    size_t computeMostThreatening(const std::vector<PolarPosition> points, float distanceCoeff, bool reverseGear);
 
     void updateCurrentPose(geometry_msgs::Pose newPose);
     void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
 
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
+    ros::Publisher obstacle_behind_posestamped_pub;
     ros::Subscriber lidar_sub;
     ros::Subscriber current_pose_sub;
     ros::Subscriber aruco_obstacles_sub;
