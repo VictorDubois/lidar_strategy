@@ -283,12 +283,12 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     {
         // Only detect in front of the current direction
         if ((!reverseGear && (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)) ||
-                (reverseGear && (lidar_sensors_angles[i] > 60 || lidar_sensors_angles[i] < 300)))
+                (reverseGear && lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 300))
         {
             continue;
         }
 
-        float l_angle = reverseGear ? -points[i].second : points[i].second;
+        float l_angle = reverseGear ? fmod(points[i].second + 180, 360) : points[i].second;
 
         float danger = speed_inhibition(points[i].first, l_angle, distanceCoeff);
 
