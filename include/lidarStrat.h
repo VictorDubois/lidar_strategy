@@ -46,10 +46,14 @@ private:
                                       const float y2,
                                       float& xx,
                                       float& yy);
-    size_t computeMostThreatening(const std::vector<PolarPosition> points, float distanceCoeff, bool reverseGear);
+    size_t computeMostThreatening(const std::vector<PolarPosition> points,
+                                  float distanceCoeff,
+                                  bool reverseGear);
 
     void updateCurrentPose(geometry_msgs::Pose newPose);
     void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
+    bool isInsideTable(Position input);
+    Position toAbsolute(Position input);
 
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
