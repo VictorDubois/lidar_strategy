@@ -29,7 +29,7 @@ void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
 
 void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
-    // obstacle_dbg = new_scan;
+    obstacle_dbg = new_scan;
     for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
     {
         if (new_scan.intensities[i] < MIN_INTENSITY || new_scan.ranges[i] < MIN_DISTANCE)
@@ -307,6 +307,19 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     return currentMostThreateningId;
 }
 
+Position LidarStrat::toAbsolute(Position input)
+{
+    return input + currentPose.getPosition();
+}
+
+bool LidarStrat::isInsideTable(Position input)
+{
+    return input.getX() < 3000 &&
+            input.getX() > 0 &&
+            input.getY() < 2000 &&
+            input.getY() > 0;
+}
+
 void LidarStrat::run()
 {
     float distanceCoeff = 1;
@@ -320,14 +333,30 @@ void LidarStrat::run()
     {
         std::vector<PolarPosition> obstacles;
 
+        obstacles.push_back(std::make_pair<float, float>(1000, 0));// Have at least one obstacle
+
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             // obstacle_dbg.intensities[i]
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
-            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]) - 180.0f);
+            //obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
+            //obstacle_dbg.ranges[i] = raw_sensors_dists[i];
 
-            obstacles.push_back(std::make_pair<float, float>(
-              static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
+            float posX, posY;
+            polar_to_cart(posX, posY, i, raw_sensors_dists[i]);
+            Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
+
+            bool allowed = isInsideTable(vodka);
+
+            /*std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
+            std::cout << "Current Pose x = " << currentPose.getPosition().getX() << ", y = " << currentPose.getPosition().getY() << std::endl;
+            std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY() << ", allowed = " << allowed << std::endl;
+            std::cout << std::endl;*/
+            if(allowed)
+            {
+                obstacles.push_back(std::make_pair<float, float>(
+                  static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
+            }
         }
 
         std::vector<std::pair<Position, Position>> maps_segments;
