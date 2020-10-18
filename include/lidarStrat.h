@@ -32,6 +32,7 @@ private:
     std::vector<PolarPosition> aruco_obstacles;
     PositionPlusAngle currentPose;
     sensor_msgs::LaserScan obstacle_dbg; // used to display debug stuff
+    std::array<geometry_msgs::PoseStamped, 10> arucos;
 
     void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance, bool reverseGear);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
@@ -52,8 +53,19 @@ private:
 
     void updateCurrentPose(geometry_msgs::Pose newPose);
     void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
+    void updateAruco1(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco2(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco3(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco4(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco5(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco6(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco7(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco8(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco9(geometry_msgs::PoseStamped arucoPose);
+    void updateAruco10(geometry_msgs::PoseStamped arucoPose);
     bool isInsideTable(Position input);
     Position toAbsolute(Position input);
+    bool is_blue;
 
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
@@ -61,6 +73,16 @@ private:
     ros::Subscriber lidar_sub;
     ros::Subscriber current_pose_sub;
     ros::Subscriber aruco_obstacles_sub;
+    ros::Subscriber aruco_1_sub;
+    ros::Subscriber aruco_2_sub;
+    ros::Subscriber aruco_3_sub;
+    ros::Subscriber aruco_4_sub;
+    ros::Subscriber aruco_5_sub;
+    ros::Subscriber aruco_6_sub;
+    ros::Subscriber aruco_7_sub;
+    ros::Subscriber aruco_8_sub;
+    ros::Subscriber aruco_9_sub;
+    ros::Subscriber aruco_10_sub;
 };
 
 #endif
