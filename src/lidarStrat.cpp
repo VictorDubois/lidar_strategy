@@ -286,12 +286,12 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     for (size_t i = 0; i < points.size(); i++)
     {
         // Only detect in front of the current direction
-        if ((!reverseGear && (i < 120 || i > 240)) || (reverseGear && i > 60 && i < 300))
+        if ((reverseGear && (i < 120 || i > 240)) || (!reverseGear && i > 60 && i < 300))
         {
             continue;
         }
 
-        float l_angle = reverseGear ? fmod(points[i].second + 180, 360) : points[i].second;
+        float l_angle = reverseGear ? points[i].second : fmod(points[i].second + 180, 360);
 
         float danger = speed_inhibition(points[i].first, l_angle, distanceCoeff);
 
@@ -312,6 +312,7 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
 
 Position LidarStrat::toAbsolute(Position input)
 {
+    // Naive approch, do not use
     return input + currentPose.getPosition();
 }
 
