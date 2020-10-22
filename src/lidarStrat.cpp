@@ -160,7 +160,9 @@ float LidarStrat::speed_inhibition(float distance, float angle, float distanceCo
     return (50.f * tanh((distance - half_stop) / slope) + 49.f) / 100.f;
 }
 
-void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance, bool reverseGear)
+void LidarStrat::sendObstaclePose(float nearest_obstacle_angle,
+                                  float obstacle_distance,
+                                  bool reverseGear)
 {
     geometry_msgs::Pose obstacle_pose;
     float posX;
@@ -173,10 +175,12 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle, float obstacle_d
     obstacle_pose_stamped.header.frame_id
       = "base_link"; // base_link for robot, neato_laser for logs/debug
 
-    if (reverseGear) {
+    if (reverseGear)
+    {
         obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
     }
-    else {
+    else
+    {
         obstacle_posestamped_pub.publish(obstacle_pose_stamped);
     }
     // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
@@ -202,8 +206,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
 
     ros::NodeHandle n;
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
-    obstacle_posestamped_pub
-      = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
     obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
@@ -271,7 +274,8 @@ void LidarStrat::ClosestPointOfSegment(const float x,
 }
 
 size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> points,
-                                          float distanceCoeff, bool reverseGear)
+                                          float distanceCoeff,
+                                          bool reverseGear)
 {
     size_t currentMostThreateningId = 0;
 
@@ -282,8 +286,7 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     for (size_t i = 0; i < points.size(); i++)
     {
         // Only detect in front of the current direction
-        if ((!reverseGear && (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240)) ||
-                (reverseGear && lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 300))
+        if ((!reverseGear && (i < 120 || i > 240)) || (reverseGear && i > 60 && i < 300))
         {
             continue;
         }
@@ -314,10 +317,7 @@ Position LidarStrat::toAbsolute(Position input)
 
 bool LidarStrat::isInsideTable(Position input)
 {
-    return input.getX() < 2900 &&
-            input.getX() > 100 &&
-            input.getY() < 1900 &&
-            input.getY() > 100;
+    return input.getX() < 2900 && input.getX() > 100 && input.getY() < 1900 && input.getY() > 100;
 }
 
 void LidarStrat::run()
@@ -333,19 +333,20 @@ void LidarStrat::run()
     {
         std::vector<PolarPosition> obstacles;
 
-        obstacles.push_back(std::make_pair<float, float>(1000, 0));// Have at least one obstacle
+        obstacles.push_back(std::make_pair<float, float>(1000, 0)); // Have at least one obstacle
 
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             // obstacle_dbg.intensities[i]
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
-            //obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
+            // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
             obstacle_dbg.ranges[i] = raw_sensors_dists[i];
             obstacle_dbg.intensities[i] = 10;
-            if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120) || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
+            if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120)
+                || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
             {
                 obstacle_dbg.intensities[i] = 0;
-                continue;
+                // continue;
             }
 
             float posX, posY;
@@ -355,10 +356,13 @@ void LidarStrat::run()
             bool allowed = isInsideTable(vodka);
 
             std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
-            std::cout << "Current Pose x = " << currentPose.getPosition().getX() << ", y = " << currentPose.getPosition().getY() << std::endl;
-            std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY() << ", allowed = " << allowed << std::endl;
+            std::cout << "Current Pose x = " << currentPose.getPosition().getX()
+                      << ", y = " << currentPose.getPosition().getY() << std::endl;
+            std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
+                      << ", allowed = " << allowed << std::endl;
             std::cout << std::endl;
-            if(allowed)
+            allowed = true;
+            if (allowed)
             {
                 obstacles.push_back(std::make_pair<float, float>(
                   static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
@@ -386,7 +390,7 @@ void LidarStrat::run()
             // @Todo check sign of angle
         }
 
-        //obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
+        // obstacles.insert(obstacles.end(), aruco_obstacles.begin(), aruco_obstacles.end());
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, false);
         size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, true);
@@ -395,13 +399,13 @@ void LidarStrat::run()
         float nearest_obstacle_angle = obstacles[most_threateningId].second;
         std::cout << "nearest_obstacle_angle = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
-        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance, false);
+        sendObstaclePose(180 - nearest_obstacle_angle, obstacle_distance, false);
 
         obstacle_distance = obstacles[most_threateningBehindId].first;
         nearest_obstacle_angle = obstacles[most_threateningBehindId].second;
         std::cout << "nearest_obstacle_angle Behind = " << nearest_obstacle_angle << ", at "
                   << obstacle_distance << " m " << std::endl;
-        sendObstaclePose(180-nearest_obstacle_angle, obstacle_distance, true);
+        sendObstaclePose(180 - nearest_obstacle_angle, obstacle_distance, true);
         // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
         // frame
 
