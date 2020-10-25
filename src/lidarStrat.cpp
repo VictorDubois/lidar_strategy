@@ -207,6 +207,8 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     ros::NodeHandle n;
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
     obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_Absolute_posestamped_pub
+      = n.advertise<geometry_msgs::PoseArray>("obstacle_absolute_pose_stamped", 5);
     obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
@@ -336,6 +338,9 @@ void LidarStrat::run()
 
         obstacles.push_back(std::make_pair<float, float>(1000, 0)); // Have at least one obstacle
 
+        geometry_msgs::PoseArray absoluteObstacles;
+        absoluteObstacles.header.frame_id = "odom";
+
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
         {
             // obstacle_dbg.intensities[i]
@@ -343,6 +348,7 @@ void LidarStrat::run()
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
             obstacle_dbg.ranges[i] = raw_sensors_dists[i];
             obstacle_dbg.intensities[i] = 10;
+
             if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120)
                 || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
             {
@@ -363,13 +369,20 @@ void LidarStrat::run()
             std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
                       << ", allowed = " << allowed << std::endl;
             std::cout << std::endl;
+
+            geometry_msgs::Pose absolutePose;
+            absolutePose.position = vodka.getPoint();
             // allowed = true;
+            absolutePose.position.z = 0.0;
             if (allowed)
             {
+                absolutePose.position.z = 1;
                 obstacles.push_back(std::make_pair<float, float>(
                   static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
             }
+            absoluteObstacles.poses.push_back(absolutePose);
         }
+        obstacle_Absolute_posestamped_pub.publish(absoluteObstacles);
 
         std::vector<std::pair<Position, Position>> maps_segments;
         maps_segments.push_back(std::make_pair(Position(0, 0), Position(3000, 0)));

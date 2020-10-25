@@ -58,6 +58,7 @@ private:
     ros::Publisher obstacle_danger_debuger;
     ros::Publisher obstacle_posestamped_pub;
     ros::Publisher obstacle_behind_posestamped_pub;
+    ros::Publisher obstacle_Absolute_posestamped_pub;
     ros::Subscriber lidar_sub;
     ros::Subscriber current_pose_sub;
     ros::Subscriber aruco_obstacles_sub;
