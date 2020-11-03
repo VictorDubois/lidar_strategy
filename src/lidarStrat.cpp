@@ -27,6 +27,23 @@ void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
               << ", y = " << currentPose.getPosition().getY() << std::endl;
 }
 
+void LidarStrat::updateLidarScanSimu(sensor_msgs::LaserScan new_scan)
+{
+    obstacle_dbg = new_scan;
+    for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
+    {
+        if (new_scan.ranges[i] < MIN_DISTANCE)
+        {
+            // Unreliable, do not take into account
+            raw_sensors_dists[i] = MAX_DISTANCE;
+        }
+        else
+        {
+            raw_sensors_dists[i] = new_scan.ranges[i];
+        }
+    }
+}
+
 void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
     obstacle_dbg = new_scan;
@@ -210,6 +227,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+    lidar_simu_sub = n.subscribe("/krabby/scan", 5, &LidarStrat::updateLidarScanSimu, this);
     current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
     aruco_obstacles_sub
       = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
@@ -343,6 +361,7 @@ void LidarStrat::run()
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
             obstacle_dbg.ranges[i] = raw_sensors_dists[i];
             obstacle_dbg.intensities[i] = 10;
+
             if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120)
                 || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
             {
@@ -356,12 +375,12 @@ void LidarStrat::run()
             Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
 
             bool allowed = isInsideTable(vodka);
-
             std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
             std::cout << "Current Pose x = " << currentPose.getPosition().getX()
                       << ", y = " << currentPose.getPosition().getY() << std::endl;
             std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
                       << ", allowed = " << allowed << std::endl;
+
             std::cout << std::endl;
             // allowed = true;
             if (allowed)
