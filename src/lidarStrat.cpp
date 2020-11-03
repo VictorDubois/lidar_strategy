@@ -312,8 +312,8 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
 
 Position LidarStrat::toAbsolute(Position input)
 {
-    // Naive approch, do not use
-    return input + currentPose.getPosition();
+    return Position(input.getX() + currentPose.getPosition().getX(),
+                    input.getY() - currentPose.getPosition().getY());
 }
 
 bool LidarStrat::isInsideTable(Position input)
@@ -351,7 +351,8 @@ void LidarStrat::run()
             }
 
             float posX, posY;
-            polar_to_cart(posX, posY, i, raw_sensors_dists[i]);
+            polar_to_cart(
+              posX, posY, fmod(360 + i - currentPose.getAngle(), 360), raw_sensors_dists[i]);
             Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
 
             bool allowed = isInsideTable(vodka);
@@ -362,7 +363,7 @@ void LidarStrat::run()
             std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
                       << ", allowed = " << allowed << std::endl;
             std::cout << std::endl;
-            allowed = true;
+            // allowed = true;
             if (allowed)
             {
                 obstacles.push_back(std::make_pair<float, float>(
