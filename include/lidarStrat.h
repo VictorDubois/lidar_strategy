@@ -12,8 +12,8 @@
 #include <ros/ros.h>
 #include <vector>
 
-#include "Krabi/position.h"
-#include "Krabi/positionPlusAngle.h"
+#include "krabilib/position.h"
+#include "krabilib/positionPlusAngle.h"
 
 class LidarStrat
 {

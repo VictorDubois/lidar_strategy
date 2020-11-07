@@ -7,34 +7,26 @@ add_definitions(-D USE_ROS)
 add_definitions(-D USE_IOSTREAM)
 add_definitions(-D STANDALONE_STRATEGIE)
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  geometry_msgs
-)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs geometry_msgs
+                                        goal_strategy message_generation)
 
 catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs
-)
+  INCLUDE_DIRS
+  include
+  LIBRARIES
+  ${PROJECT_NAME}
+  CATKIN_DEPENDS
+  roscpp
+  std_msgs
+  geometry_msgs
+  goal_strategy)
 
-include_directories(
- include
-  ${catkin_INCLUDE_DIRS}
-)
+include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME}_node 
-	src/main.cpp
-	src/lidarStrat.cpp
-	src/Krabi/src/position.cpp
-	src/Krabi/src/positionPlusAngle.cpp
-	src/Krabi/src/vec2d.cpp
-	src/Krabi/src/vec3d.cpp
-	src/Krabi/src/angle.cpp
-	src/Krabi/src/distance.cpp
-)
+add_library(${PROJECT_NAME} src/lidarStrat.cpp)
 
-target_link_libraries(${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
-)
+add_executable(${PROJECT_NAME}_node src/main.cpp)
+
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${PROJECT_NAME})
