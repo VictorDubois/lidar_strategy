@@ -378,12 +378,7 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     for (size_t i = 0; i < points.size(); i++)
     {
         // Only detect in front of the current direction
-<<<<<<< HEAD
-        if ((!reverseGear && (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240))
-            || (reverseGear && lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 300))
-=======
         if ((reverseGear && (i < 120 || i > 240)) || (!reverseGear && i > 60 && i < 300))
->>>>>>> new-msgs
         {
             continue;
         }
@@ -415,11 +410,7 @@ Position LidarStrat::toAbsolute(Position input)
 
 bool LidarStrat::isInsideTable(Position input)
 {
-<<<<<<< HEAD
-    return input.getX() < 3000 && input.getX() > 0 && input.getY() < 2000 && input.getY() > 0;
-=======
     return input.getX() < 2900 && input.getX() > 100 && input.getY() < 1900 && input.getY() > 100;
->>>>>>> new-msgs
 }
 
 void LidarStrat::run()
@@ -442,9 +433,6 @@ void LidarStrat::run()
             // obstacle_dbg.intensities[i]
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
-<<<<<<< HEAD
-            // obstacle_dbg.ranges[i] = raw_sensors_dists[i];
-=======
             obstacle_dbg.ranges[i] = raw_sensors_dists[i];
             obstacle_dbg.intensities[i] = 10;
 
@@ -454,7 +442,6 @@ void LidarStrat::run()
                 obstacle_dbg.intensities[i] = 0;
                 // continue;
             }
->>>>>>> new-msgs
 
             float posX, posY;
             polar_to_cart(
@@ -462,14 +449,6 @@ void LidarStrat::run()
             Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
 
             bool allowed = isInsideTable(vodka);
-<<<<<<< HEAD
-
-            /*std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
-            std::cout << "Current Pose x = " << currentPose.getPosition().getX() << ", y = " <<
-            currentPose.getPosition().getY() << std::endl; std::cout << "Absolut x = " <<
-            vodka.getX() << ", y = " << vodka.getY() << ", allowed = " << allowed << std::endl;
-            std::cout << std::endl;*/
-=======
             std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
             std::cout << "Current Pose x = " << currentPose.getPosition().getX()
                       << ", y = " << currentPose.getPosition().getY() << std::endl;
@@ -478,7 +457,6 @@ void LidarStrat::run()
 
             std::cout << std::endl;
             // allowed = true;
->>>>>>> new-msgs
             if (allowed)
             {
                 obstacles.push_back(std::make_pair<float, float>(
