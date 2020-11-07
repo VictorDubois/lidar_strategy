@@ -27,6 +27,23 @@ void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
               << ", y = " << currentPose.getPosition().getY() << std::endl;
 }
 
+void LidarStrat::updateLidarScanSimu(sensor_msgs::LaserScan new_scan)
+{
+    obstacle_dbg = new_scan;
+    for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
+    {
+        if (new_scan.ranges[i] < MIN_DISTANCE)
+        {
+            // Unreliable, do not take into account
+            raw_sensors_dists[i] = MAX_DISTANCE;
+        }
+        else
+        {
+            raw_sensors_dists[i] = new_scan.ranges[i];
+        }
+    }
+}
+
 void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
 {
     obstacle_dbg = new_scan;
@@ -267,6 +284,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+    lidar_simu_sub = n.subscribe("/krabby/scan", 5, &LidarStrat::updateLidarScanSimu, this);
     current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
     aruco_obstacles_sub
       = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
@@ -360,13 +378,17 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     for (size_t i = 0; i < points.size(); i++)
     {
         // Only detect in front of the current direction
+<<<<<<< HEAD
         if ((!reverseGear && (lidar_sensors_angles[i] < 120 || lidar_sensors_angles[i] > 240))
             || (reverseGear && lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 300))
+=======
+        if ((reverseGear && (i < 120 || i > 240)) || (!reverseGear && i > 60 && i < 300))
+>>>>>>> new-msgs
         {
             continue;
         }
 
-        float l_angle = reverseGear ? fmod(points[i].second + 180, 360) : points[i].second;
+        float l_angle = reverseGear ? points[i].second : fmod(points[i].second + 180, 360);
 
         float danger = speed_inhibition(points[i].first, l_angle, distanceCoeff);
 
@@ -387,12 +409,17 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
 
 Position LidarStrat::toAbsolute(Position input)
 {
-    return input + currentPose.getPosition();
+    return Position(input.getX() + currentPose.getPosition().getX(),
+                    input.getY() - currentPose.getPosition().getY());
 }
 
 bool LidarStrat::isInsideTable(Position input)
 {
+<<<<<<< HEAD
     return input.getX() < 3000 && input.getX() > 0 && input.getY() < 2000 && input.getY() > 0;
+=======
+    return input.getX() < 2900 && input.getX() > 100 && input.getY() < 1900 && input.getY() > 100;
+>>>>>>> new-msgs
 }
 
 void LidarStrat::run()
@@ -415,19 +442,43 @@ void LidarStrat::run()
             // obstacle_dbg.intensities[i]
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
+<<<<<<< HEAD
             // obstacle_dbg.ranges[i] = raw_sensors_dists[i];
+=======
+            obstacle_dbg.ranges[i] = raw_sensors_dists[i];
+            obstacle_dbg.intensities[i] = 10;
+
+            if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120)
+                || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
+            {
+                obstacle_dbg.intensities[i] = 0;
+                // continue;
+            }
+>>>>>>> new-msgs
 
             float posX, posY;
-            polar_to_cart(posX, posY, i, raw_sensors_dists[i]);
+            polar_to_cart(
+              posX, posY, fmod(360 + i - currentPose.getAngle(), 360), raw_sensors_dists[i]);
             Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
 
             bool allowed = isInsideTable(vodka);
+<<<<<<< HEAD
 
             /*std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
             std::cout << "Current Pose x = " << currentPose.getPosition().getX() << ", y = " <<
             currentPose.getPosition().getY() << std::endl; std::cout << "Absolut x = " <<
             vodka.getX() << ", y = " << vodka.getY() << ", allowed = " << allowed << std::endl;
             std::cout << std::endl;*/
+=======
+            std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
+            std::cout << "Current Pose x = " << currentPose.getPosition().getX()
+                      << ", y = " << currentPose.getPosition().getY() << std::endl;
+            std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
+                      << ", allowed = " << allowed << std::endl;
+
+            std::cout << std::endl;
+            // allowed = true;
+>>>>>>> new-msgs
             if (allowed)
             {
                 obstacles.push_back(std::make_pair<float, float>(

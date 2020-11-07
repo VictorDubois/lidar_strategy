@@ -36,6 +36,7 @@ private:
 
     void sendObstaclePose(float nearest_obstacle_angle, float obstacle_distance, bool reverseGear);
     void updateLidarScan(sensor_msgs::LaserScan new_scan);
+    void updateLidarScanSimu(sensor_msgs::LaserScan new_scan);
     void ClosestPointOfSegment(const Position& segment1,
                                const Position& segment2,
                                Position& closestPoint);
@@ -71,6 +72,7 @@ private:
     ros::Publisher obstacle_posestamped_pub;
     ros::Publisher obstacle_behind_posestamped_pub;
     ros::Subscriber lidar_sub;
+    ros::Subscriber lidar_simu_sub;
     ros::Subscriber current_pose_sub;
     ros::Subscriber aruco_obstacles_sub;
     ros::Subscriber aruco_1_sub;
