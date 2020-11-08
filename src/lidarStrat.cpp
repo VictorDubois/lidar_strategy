@@ -2,61 +2,43 @@
 
 #include "lidarStrat.h"
 
-//#define NB_MEASURES_LIDAR 360
-
-#define CRITICAL_DISTANCE 0.100f      // in m
-#define CRITCIAL_DISTANCE_TRIG 0.120f // in m
-#define LIDAR_DIST_OFFSET                                                                          \
-    0.080f // in m, the lidar is much more deep inside the robot, vs the US/IR near the outside
-#define MAX_DISTANCE 6.0f // in m
-#define MIN_DISTANCE 0.1f // in m
-#define MIN_INTENSITY 10
-
-// The smoothing factor for the obstacles' intensity
-#define ALPHA 1
-
-#ifndef MAX
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
+void LidarStrat::updateCurrentPose(const geometry_msgs::Pose& newPose)
 {
-    currentPose = PositionPlusAngle(newPose);
-    std::cout << "updateCurrentPose: x = " << currentPose.getPosition().getX()
-              << ", y = " << currentPose.getPosition().getY() << std::endl;
+    m_currentPose = PositionPlusAngle(newPose);
+    std::cout << "updateCurrentPose: x = " << m_currentPose.getPosition().getX()
+              << ", y = " << m_currentPose.getPosition().getY() << std::endl;
 }
 
-void LidarStrat::updateLidarScanSimu(sensor_msgs::LaserScan new_scan)
+void LidarStrat::updateLidarScanSimu(const sensor_msgs::LaserScan& new_scan)
 {
-    obstacle_dbg = new_scan;
-    for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
+    m_obstacle_dbg = new_scan;
+    for (size_t i = 0; i < m_nb_measures_lidar; i++)
     {
-        if (new_scan.ranges[i] < MIN_DISTANCE)
+        if (new_scan.ranges[i] < m_min_distance)
         {
             // Unreliable, do not take into account
-            raw_sensors_dists[i] = MAX_DISTANCE;
+            m_raw_sensors_dists[i] = m_max_distance;
         }
         else
         {
-            raw_sensors_dists[i] = new_scan.ranges[i];
+            m_raw_sensors_dists[i] = new_scan.ranges[i];
         }
     }
 }
 
-void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
+void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
 {
-    obstacle_dbg = new_scan;
-    for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
+    m_obstacle_dbg = new_scan;
+    for (size_t i = 0; i < m_nb_measures_lidar; i++)
     {
-        if (new_scan.intensities[i] < MIN_INTENSITY || new_scan.ranges[i] < MIN_DISTANCE)
+        if (new_scan.intensities[i] < m_min_intensity || new_scan.ranges[i] < m_min_distance)
         {
             // Unreliable, do not take into account
-            raw_sensors_dists[i] = MAX_DISTANCE;
+            m_raw_sensors_dists[i] = m_max_distance;
         }
         else
         {
-            raw_sensors_dists[i] = new_scan.ranges[i];
+            m_raw_sensors_dists[i] = new_scan.ranges[i];
         }
     }
 }
@@ -129,21 +111,21 @@ void cart_to_polar(const float posX, const float posY, float& theta, float& dist
 #endif
 }
 
-void LidarStrat::updateArucoObstacles(geometry_msgs::PoseArray newPoses)
+void LidarStrat::updateArucoObstacles(const geometry_msgs::PoseArray& newPoses)
 {
-    aruco_obstacles.clear();
+    m_aruco_obstacles.clear();
     for (auto pose : newPoses.poses)
     {
         float theta, distance;
-        cart_to_polar(currentPose.getPosition().getX() - static_cast<float>(pose.position.x),
-                      currentPose.getPosition().getY() - static_cast<float>(pose.position.y),
+        cart_to_polar(m_currentPose.getPosition().getX() - static_cast<float>(pose.position.x),
+                      m_currentPose.getPosition().getY() - static_cast<float>(pose.position.y),
                       theta,
                       distance);
 
         // the center of the aruco is probably farther than the edge of the robot
-        distance = MAX(0, distance - 0.2f);
+        distance = std::max(0.f, distance - 0.2f);
 
-        aruco_obstacles.push_back(
+        m_aruco_obstacles.push_back(
           std::make_pair<float, float>(static_cast<float>(distance), static_cast<float>(theta)));
 
         std::cout << "arucoObstacle: distance = " << distance << ", theta = " << theta << std::endl;
@@ -194,64 +176,19 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle,
 
     if (reverseGear)
     {
-        obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
+        m_obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
     }
     else
     {
-        obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+        m_obstacle_posestamped_pub.publish(obstacle_pose_stamped);
     }
     // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
     // obstacle_pose.position.y << std::endl;
 }
 
-void LidarStrat::updateAruco1(geometry_msgs::PoseStamped arucoPose)
+void LidarStrat::updateAruco(boost::shared_ptr<geometry_msgs::PoseStamped const> arucoPose, int id)
 {
-    arucos[0] = arucoPose;
-}
-
-void LidarStrat::updateAruco2(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[1] = arucoPose;
-}
-
-void LidarStrat::updateAruco3(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[2] = arucoPose;
-}
-
-void LidarStrat::updateAruco4(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[3] = arucoPose;
-}
-
-void LidarStrat::updateAruco5(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[4] = arucoPose;
-}
-
-void LidarStrat::updateAruco6(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[5] = arucoPose;
-}
-
-void LidarStrat::updateAruco7(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[6] = arucoPose;
-}
-
-void LidarStrat::updateAruco8(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[7] = arucoPose;
-}
-
-void LidarStrat::updateAruco9(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[8] = arucoPose;
-}
-
-void LidarStrat::updateAruco10(geometry_msgs::PoseStamped arucoPose)
-{
-    arucos[9] = arucoPose;
+    m_arucos[id] = *arucoPose;
 }
 
 LidarStrat::LidarStrat(int argc, char* argv[])
@@ -261,57 +198,73 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     ros::init(argc, argv, "lidarStrat");
     ros::NodeHandle n;
 
-    arucos
+    m_arucos
       = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped() }; // std::array<geometry_msgs::PoseStamped, 10>
 
-    for (int i = 0; i < NB_MEASURES_LIDAR; i++)
+    for (int i = 0; i < m_nb_measures_lidar; i++)
     {
-        raw_sensors_dists.push_back(0);
-        lidar_sensors_angles.push_back((i + 180) % 360); // conversion from loop index to degrees
-        obstacle_dbg.intensities.push_back(0);
-        obstacle_dbg.ranges.push_back(0);
+        m_raw_sensors_dists.push_back(0);
+        m_lidar_sensors_angles.push_back((i + 180) % 360); // conversion from loop index to degrees
+        m_obstacle_dbg.intensities.push_back(0);
+        m_obstacle_dbg.ranges.push_back(0);
     }
-    aruco_obstacles.clear();
+    m_aruco_obstacles.clear();
 
-    
-    n.param<bool>("isBlue", is_blue, true);
-    obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
-    obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
-    obstacle_behind_posestamped_pub
+    n.param<bool>("isBlue", m_is_blue, true);
+    n.param<float>("/strategy/lidar/max_distance", m_max_distance, 6.0f);
+    n.param<float>("/strategy/lidar/min_distance", m_min_distance, 0.1f);
+    n.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
+    n.param<int>("strategy/lidar/nb_measures_lidar", m_nb_measures_lidar, 360);
+
+
+    m_obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
+    m_obstacle_posestamped_pub
+      = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+    m_obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
-    lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
-    lidar_simu_sub = n.subscribe("/krabby/scan", 5, &LidarStrat::updateLidarScanSimu, this);
-    current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
-    aruco_obstacles_sub
+    m_lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+    m_lidar_simu_sub = n.subscribe("/krabby/scan", 5, &LidarStrat::updateLidarScanSimu, this);
+    m_current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
+    m_aruco_obstacles_sub
       = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
 
-    if (is_blue)
+    if (m_is_blue)
     {
-        aruco_6_sub = n.subscribe("pose_robots/6", 5, &LidarStrat::updateAruco6, this);
-        aruco_7_sub = n.subscribe("pose_robots/7", 5, &LidarStrat::updateAruco7, this);
-        aruco_8_sub = n.subscribe("pose_robots/8", 5, &LidarStrat::updateAruco8, this);
-        aruco_9_sub = n.subscribe("pose_robots/9", 5, &LidarStrat::updateAruco9, this);
-        aruco_10_sub = n.subscribe("pose_robots/10", 5, &LidarStrat::updateAruco10, this);
+        m_arucos_sub[6] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/6", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 6));
+        m_arucos_sub[7] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/7", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 7));
+        m_arucos_sub[8] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/8", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 8));
+        m_arucos_sub[9] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/9", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 9));
+        m_arucos_sub[10] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/10", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 10));
     }
     else
     {
-        aruco_1_sub = n.subscribe("pose_robots/1", 5, &LidarStrat::updateAruco1, this);
-        aruco_2_sub = n.subscribe("pose_robots/2", 5, &LidarStrat::updateAruco2, this);
-        aruco_3_sub = n.subscribe("pose_robots/3", 5, &LidarStrat::updateAruco3, this);
-        aruco_4_sub = n.subscribe("pose_robots/4", 5, &LidarStrat::updateAruco4, this);
-        aruco_5_sub = n.subscribe("pose_robots/5", 5, &LidarStrat::updateAruco5, this);
+        m_arucos_sub[1] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/1", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 1));
+        m_arucos_sub[2] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/2", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 2));
+        m_arucos_sub[3] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/3", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 3));
+        m_arucos_sub[4] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/4", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 4));
+        m_arucos_sub[5] = n.subscribe<geometry_msgs::PoseStamped>(
+          "pose_robots/5", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 5));
     }
 }
 
-void LidarStrat::ClosestPointOfSegment(const Position& segment1,
+void LidarStrat::closest_point_of_segment(const Position& segment1,
                                        const Position& segment2,
                                        Position& closestPoint)
 {
     float xx, yy;
-    ClosestPointOfSegment(0, // currentPose.getPosition().getX(),
+    closest_point_of_segment(0, // currentPose.getPosition().getX(),
                           0, // currentPose.getPosition().getY(),
                           segment1.getX(),
                           segment1.getY(),
@@ -324,7 +277,7 @@ void LidarStrat::ClosestPointOfSegment(const Position& segment1,
 }
 
 // Thanks to https://stackoverflow.com/a/6853926/10680963
-void LidarStrat::ClosestPointOfSegment(const float x,
+void LidarStrat::closest_point_of_segment(const float x,
                                        const float y,
                                        const float x1,
                                        const float y1,
@@ -364,7 +317,7 @@ void LidarStrat::ClosestPointOfSegment(const float x,
     std::cout << "xx = " << xx << ", yy = " << yy << std::endl;
 }
 
-size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> points,
+size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& points,
                                           float distanceCoeff,
                                           bool reverseGear)
 {
@@ -401,13 +354,13 @@ size_t LidarStrat::computeMostThreatening(const std::vector<PolarPosition> point
     return currentMostThreateningId;
 }
 
-Position LidarStrat::toAbsolute(Position input)
+Position LidarStrat::toAbsolute(const Position& input)
 {
-    return Position(input.getX() + currentPose.getPosition().getX(),
-                    input.getY() - currentPose.getPosition().getY());
+    return Position(input.getX() + m_currentPose.getPosition().getX(),
+                    input.getY() - m_currentPose.getPosition().getY());
 }
 
-bool LidarStrat::isInsideTable(Position input)
+bool LidarStrat::isInsideTable(const Position& input)
 {
     return input.getX() < 2900 && input.getX() > 100 && input.getY() < 1900 && input.getY() > 100;
 }
@@ -427,30 +380,30 @@ void LidarStrat::run()
 
         obstacles.push_back(std::make_pair<float, float>(1000, 0)); // Have at least one obstacle
 
-        for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
+        for (size_t i = 0; i < m_nb_measures_lidar; i += 1)
         {
             // obstacle_dbg.intensities[i]
             //  = speed_inhibition(raw_sensors_dists[i], lidar_sensors_angles[i], 1);
             // obstacle_dbg.ranges[i] = sin_card((lidar_sensors_angles[i]));
-            obstacle_dbg.ranges[i] = raw_sensors_dists[i];
-            obstacle_dbg.intensities[i] = 10;
+            m_obstacle_dbg.ranges[i] = m_raw_sensors_dists[i];
+            m_obstacle_dbg.intensities[i] = 10;
 
-            if ((lidar_sensors_angles[i] > 60 && lidar_sensors_angles[i] < 120)
-                || (lidar_sensors_angles[i] > 240 && lidar_sensors_angles[i] < 300))
+            if ((m_lidar_sensors_angles[i] > 60 && m_lidar_sensors_angles[i] < 120)
+                || (m_lidar_sensors_angles[i] > 240 && m_lidar_sensors_angles[i] < 300))
             {
-                obstacle_dbg.intensities[i] = 0;
+                m_obstacle_dbg.intensities[i] = 0;
                 // continue;
             }
 
             float posX, posY;
             polar_to_cart(
-              posX, posY, fmod(360 + i - currentPose.getAngle(), 360), raw_sensors_dists[i]);
+              posX, posY, fmod(360 + i - m_currentPose.getAngle(), 360), m_raw_sensors_dists[i]);
             Position vodka = toAbsolute(Position(posX * 1000, posY * 1000));
 
             bool allowed = isInsideTable(vodka);
             std::cout << "Read x = " << posX << ", y = " << posY << std::endl;
-            std::cout << "Current Pose x = " << currentPose.getPosition().getX()
-                      << ", y = " << currentPose.getPosition().getY() << std::endl;
+            std::cout << "Current Pose x = " << m_currentPose.getPosition().getX()
+                      << ", y = " << m_currentPose.getPosition().getY() << std::endl;
             std::cout << "Absolut x = " << vodka.getX() << ", y = " << vodka.getY()
                       << ", allowed = " << allowed << std::endl;
 
@@ -459,7 +412,7 @@ void LidarStrat::run()
             if (allowed)
             {
                 obstacles.push_back(std::make_pair<float, float>(
-                  static_cast<float>(raw_sensors_dists[i]), lidar_sensors_angles[i]));
+                  static_cast<float>(m_raw_sensors_dists[i]), m_lidar_sensors_angles[i]));
             }
         }
 
@@ -472,7 +425,7 @@ void LidarStrat::run()
         maps_segments.push_back(std::make_pair(Position(889, 0), Position(889, 2000)));
         maps_segments.push_back(std::make_pair(Position(2089, 1850), Position(2089, 2000)));
 
-        if (is_blue)
+        if (m_is_blue)
         {
             // yellow small port
             maps_segments.push_back(std::make_pair(Position(1050, 1700), Position(1050, 2000)));
@@ -485,14 +438,14 @@ void LidarStrat::run()
             maps_segments.push_back(std::make_pair(Position(1950, 1700), Position(1500, 1700)));
         }
 
-        for (geometry_msgs::PoseStamped arucoPose : arucos)
+        for (const auto& arucoPose : m_arucos)
         {
             // If the tag has been seen in the last two seconds
             if (ros::Time::now() - arucoPose.header.stamp < ros::Duration(2, 0))
             {
                 // Add it to the obstacle list
-                float posX = currentPose.getPosition().getX() / 1000 - arucoPose.pose.position.x;
-                float posY = currentPose.getPosition().getY() / 1000 - arucoPose.pose.position.y;
+                float posX = m_currentPose.getPosition().getX() / 1000 - arucoPose.pose.position.x;
+                float posY = m_currentPose.getPosition().getY() / 1000 - arucoPose.pose.position.y;
                 float theta, distance;
                 cart_to_polar(posX, posY, theta, distance);
                 /*obstacles.push_back(std::make_pair<float, float>(
@@ -504,8 +457,8 @@ void LidarStrat::run()
         for (auto segment : maps_segments)
         {
             Position closestPoint;
-            ClosestPointOfSegment(currentPose.getPosition() - segment.first,
-                                  currentPose.getPosition() - segment.second,
+            closest_point_of_segment(m_currentPose.getPosition() - segment.first,
+                                  m_currentPose.getPosition() - segment.second,
                                   closestPoint);
 
             float theta, distance;
@@ -535,7 +488,7 @@ void LidarStrat::run()
         // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
         // frame
 
-        obstacle_danger_debuger.publish(obstacle_dbg);
+        m_obstacle_danger_debuger.publish(m_obstacle_dbg);
 
         ros::spinOnce();
         loop_rate.sleep();
@@ -544,6 +497,3 @@ void LidarStrat::run()
     // Print a message to let the user know the script exited cleanly
     printf("Obstacles script exited cleanly\n");
 }
-
-//#undef NB_NEURONS
-#undef ALPHA

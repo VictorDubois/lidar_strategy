@@ -1,0 +1,4 @@
+<launch>
+  <node name="lidar_strategy_node" pkg="lidar_strategy" type="lidar_strategy_node" />
+</launch>
+
