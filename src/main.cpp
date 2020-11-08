@@ -2,9 +2,9 @@
 
 int main(int argc, char* argv[])
 {
-    LidarStrat* my_lidar_strat = new LidarStrat(argc, argv);
+    LidarStrat my_lidar_strat(argc, argv);
 
-    my_lidar_strat->run();
+    my_lidar_strat.run();
 
     return 0;
 }

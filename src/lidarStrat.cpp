@@ -1,6 +1,6 @@
 #include <utility>
 
-#include "../include/lidarStrat.h"
+#include "lidarStrat.h"
 
 //#define NB_MEASURES_LIDAR 360
 
@@ -258,15 +258,14 @@ LidarStrat::LidarStrat(int argc, char* argv[])
 {
     printf("[LIDAR] Begin main\n");
     fflush(stdout);
+    ros::init(argc, argv, "lidarStrat");
+    ros::NodeHandle n;
 
     arucos
       = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped() }; // std::array<geometry_msgs::PoseStamped, 10>
-
-    ros::init(argc, argv, "lidarStrat");
-    ros::start();
 
     for (int i = 0; i < NB_MEASURES_LIDAR; i++)
     {
@@ -277,7 +276,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     }
     aruco_obstacles.clear();
 
-    ros::NodeHandle n;
+    
     n.param<bool>("isBlue", is_blue, true);
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
     obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
@@ -489,7 +488,7 @@ void LidarStrat::run()
         for (geometry_msgs::PoseStamped arucoPose : arucos)
         {
             // If the tag has been seen in the last two seconds
-            if (arucoPose.header.stamp > ros::Time::now() - ros::Duration(2, 0))
+            if (ros::Time::now() - arucoPose.header.stamp < ros::Duration(2, 0))
             {
                 // Add it to the obstacle list
                 float posX = currentPose.getPosition().getX() / 1000 - arucoPose.pose.position.x;

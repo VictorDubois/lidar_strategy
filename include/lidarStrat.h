@@ -1,5 +1,4 @@
-#ifndef _LIDAR_H_
-#define _LIDAR_H_
+#pragma once
 
 #define NB_MEASURES_LIDAR 360
 
@@ -21,7 +20,6 @@ class LidarStrat
 public:
     LidarStrat(int argc, char* argv[]);
     LidarStrat();
-    ~LidarStrat();
     void run();
     static float speed_inhibition(float distance, float angle, float distanceCoeff);
 
@@ -86,5 +84,3 @@ private:
     ros::Subscriber aruco_9_sub;
     ros::Subscriber aruco_10_sub;
 };
-
-#endif
