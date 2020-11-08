@@ -9,23 +9,6 @@ void LidarStrat::updateCurrentPose(const geometry_msgs::Pose& newPose)
               << ", y = " << m_currentPose.getPosition().getY() << std::endl;
 }
 
-void LidarStrat::updateLidarScanSimu(const sensor_msgs::LaserScan& new_scan)
-{
-    m_obstacle_dbg = new_scan;
-    for (size_t i = 0; i < m_nb_measures_lidar; i++)
-    {
-        if (new_scan.ranges[i] < m_min_distance)
-        {
-            // Unreliable, do not take into account
-            m_raw_sensors_dists[i] = m_max_distance;
-        }
-        else
-        {
-            m_raw_sensors_dists[i] = new_scan.ranges[i];
-        }
-    }
-}
-
 void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
 {
     m_obstacle_dbg = new_scan;
@@ -198,6 +181,12 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     ros::init(argc, argv, "lidarStrat");
     ros::NodeHandle n;
 
+    n.param<bool>("isBlue", m_is_blue, true);
+    n.param<float>("/strategy/lidar/max_distance", m_max_distance, 6.0f);
+    n.param<float>("/strategy/lidar/min_distance", m_min_distance, 0.1f);
+    n.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
+    n.param<int>("/strategy/lidar/nb_measures_lidar", m_nb_measures_lidar, 360);
+
     m_arucos
       = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
           geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
@@ -213,11 +202,7 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     }
     m_aruco_obstacles.clear();
 
-    n.param<bool>("isBlue", m_is_blue, true);
-    n.param<float>("/strategy/lidar/max_distance", m_max_distance, 6.0f);
-    n.param<float>("/strategy/lidar/min_distance", m_min_distance, 0.1f);
-    n.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
-    n.param<int>("strategy/lidar/nb_measures_lidar", m_nb_measures_lidar, 360);
+
 
 
     m_obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
@@ -226,7 +211,6 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     m_obstacle_behind_posestamped_pub
       = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     m_lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
-    m_lidar_simu_sub = n.subscribe("/krabby/scan", 5, &LidarStrat::updateLidarScanSimu, this);
     m_current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
     m_aruco_obstacles_sub
       = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
