@@ -24,7 +24,6 @@ public:
 private:
     void sendObstaclePose(PolarPosition pp, bool reverseGear);
     void updateLidarScan(const sensor_msgs::LaserScan& new_scan);
-    void updateLidarScanSimu(const sensor_msgs::LaserScan& new_scan);
     void static closest_point_of_segment(const Position& point,
                                          const Position& segment1,
                                          const Position& segment2,
