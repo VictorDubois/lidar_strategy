@@ -2,7 +2,10 @@
 
 int main(int argc, char* argv[])
 {
-    LidarStrat my_lidar_strat(argc, argv);
+    ros::init(argc, argv, "lidarStrat");
+    ros::NodeHandle n;
+
+    LidarStrat my_lidar_strat(n);
 
     my_lidar_strat.run();
 

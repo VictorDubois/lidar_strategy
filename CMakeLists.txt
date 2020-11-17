@@ -8,7 +8,7 @@ add_definitions(-D USE_IOSTREAM)
 add_definitions(-D STANDALONE_STRATEGIE)
 
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs geometry_msgs
-                                        goal_strategy message_generation)
+                                        goal_strategy message_generation tf)
 
 catkin_package(
   INCLUDE_DIRS
@@ -19,6 +19,7 @@ catkin_package(
   roscpp
   std_msgs
   geometry_msgs
+  tf
   goal_strategy)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
