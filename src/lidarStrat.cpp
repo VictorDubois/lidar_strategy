@@ -9,11 +9,13 @@ void LidarStrat::updateCurrentPose()
     try
     {
         auto base_link_id = tf::resolve(ros::this_node::getNamespace(), "base_link");
+        auto laser_id = tf::resolve(ros::this_node::getNamespace(), "neato_laser");
         const auto& transform
           = m_tf_buffer.lookupTransform("map", base_link_id, ros::Time(0)).transform;
-        m_baselink_to_map = transformFromMsg(transform);
-        m_map_to_baselink = transformFromMsg(
+        m_laser_to_map = transform3DFromMsg(m_tf_buffer.lookupTransform("map", laser_id, ros::Time(0)).transform);
+        m_map_to_baselink = transform3DFromMsg(
           m_tf_buffer.lookupTransform(base_link_id, "map", ros::Time(0)).transform);
+        m_baselink_to_map = transform3DFromMsg(transform);
         m_current_pose = Pose(transform);
     }
     catch (tf2::TransformException& ex)
@@ -22,7 +24,6 @@ void LidarStrat::updateCurrentPose()
     }
 
     ROS_DEBUG_STREAM("updateCurrentPose: " << m_current_pose << std::endl);
-    ROS_DEBUG_STREAM("Transform matrix [baselink to map]: " << m_baselink_to_map);
 }
 Angle LidarStrat::idToAngle(unsigned int id)
 {
@@ -37,7 +38,7 @@ unsigned int LidarStrat::angleToId(Angle a)
 void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
 {
     m_obstacle_dbg = new_scan;
-    std::fill(m_raw_sensors_dists.begin(), m_raw_sensors_dists.end(), m_max_distance);
+    std::fill(m_lidar_sensors_dists.begin(), m_lidar_sensors_dists.end(), m_max_distance);
 
     unsigned int i = 0;
     for (float angle = new_scan.angle_min; angle < new_scan.angle_max;
@@ -48,7 +49,7 @@ void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
             && Distance(new_scan.ranges[i]) > m_min_distance
             && Distance(new_scan.ranges[i]) < m_max_distance)
         {
-            m_raw_sensors_dists[id] = new_scan.ranges[i];
+            m_lidar_sensors_dists[id] = new_scan.ranges[i];
         }
         i++;
     }
@@ -152,14 +153,18 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
 
     float max_dist;
     float min_dist;
+    float aruco_offset;
     nh.param<bool>("isBlue", m_is_blue, true);
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.1f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
+    nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
+
 
     m_max_distance = Distance(max_dist);
     m_min_distance = Distance(min_dist);
+    m_aruco_obs_offset = Distance(aruco_offset);
 
     m_arucos
       = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
@@ -169,7 +174,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
 
     for (int i = 0; i < m_nb_angular_steps; i++)
     {
-        m_raw_sensors_dists.push_back(Distance(0));
+        m_lidar_sensors_dists.push_back(Distance(0));
         m_lidar_sensors_angles.push_back(idToAngle(i)); // conversion from loop index to degrees
         m_obstacle_dbg.intensities.push_back(0);
         m_obstacle_dbg.ranges.push_back(Distance(0));
@@ -343,18 +348,19 @@ void LidarStrat::run()
 
         for (size_t i = 0; i < m_nb_angular_steps; i += 1)
         {
-            m_obstacle_dbg.ranges[i] = m_raw_sensors_dists[i];
+            m_obstacle_dbg.ranges[i] = m_lidar_sensors_dists[i];
             m_obstacle_dbg.intensities[i] = 10;
 
-            if (m_raw_sensors_dists[i] < m_max_distance && m_raw_sensors_dists[i] > m_min_distance)
+            if (m_lidar_sensors_dists[i] < m_max_distance && m_lidar_sensors_dists[i] > m_min_distance)
             {
-                PolarPosition obs_polar_local(m_raw_sensors_dists[i], m_lidar_sensors_angles[i]);
+                PolarPosition obs_polar_local(m_lidar_sensors_dists[i], m_lidar_sensors_angles[i]);
                 Position obs_local(obs_polar_local);
-                Position obs_global = obs_local.transform(m_baselink_to_map);
+                Position obs_global = obs_local.transform(m_laser_to_map);
+                Position obs_in_baselink = obs_global.transform(m_map_to_baselink);
 
                 bool allowed = isInsideTable(obs_global);
                 ROS_DEBUG_STREAM("Current Pose: " << m_current_pose);
-                ROS_DEBUG_STREAM("Obstacle local position: " << obs_local << std::endl);
+                ROS_DEBUG_STREAM("Obstacle local position: " << obs_in_baselink << std::endl);
                 ROS_DEBUG_STREAM("Obstacle global position: " << obs_global << ", Inside table = "
                                                               << allowed << std::endl);
 
@@ -364,7 +370,7 @@ void LidarStrat::run()
                 if (allowed)
                 {
                     absolutePose.position.z = 1;
-                    obstacles.push_back(obs_polar_local);
+                    obstacles.push_back(obs_in_baselink);
                 }
                 debug_obstacles_msg.poses.push_back(absolutePose);
             }
@@ -378,12 +384,19 @@ void LidarStrat::run()
 
         // TODO ADD ROCK ZONE
 
-        for (const auto& arucoPose : m_arucos)
+        for (const auto& aruco_pose : m_arucos)
         {
             // If the tag has been seen in the last two seconds
-            if (ros::Time::now() - arucoPose.header.stamp < ros::Duration(2, 0))
+            if (ros::Time::now() - aruco_pose.header.stamp < ros::Duration(2, 0))
             {
-                // TODO Add here code to add aruco obstacles to obstacle vector
+                auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
+                auto shifted_position = PolarPosition(Distance(max(position_local.getNorme()-m_aruco_obs_offset,0.)),position_local.getAngle());
+                Position closest_point(shifted_position);
+                obstacles.push_back(closest_point);
+
+                geometry_msgs::Pose absolute_pose;
+                absolute_pose.position = closest_point.transform(m_baselink_to_map);
+                debug_obstacles_msg.poses.push_back(absolute_pose);
             }
         }
 

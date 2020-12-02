@@ -52,15 +52,17 @@ private:
     Distance m_max_distance;
     float m_min_intensity;
     int m_nb_angular_steps;
+    Distance m_aruco_obs_offset;
 
     tf2_ros::Buffer m_tf_buffer;
     tf2_ros::TransformListener m_tf_listener;
-    Transform m_baselink_to_map;
-    Transform m_map_to_baselink;
+    Transform3D m_laser_to_map;
+    Transform3D m_baselink_to_map;
+    Transform3D m_map_to_baselink;
     Pose m_current_pose;
 
-    std::vector<Distance> m_raw_sensors_dists; // in m
-    std::vector<Angle> m_lidar_sensors_angles; // in deg
+    std::vector<Distance> m_lidar_sensors_dists; // in m
+    std::vector<Angle> m_lidar_sensors_angles; // in rad
     std::vector<PolarPosition> m_aruco_obstacles;
     sensor_msgs::LaserScan m_obstacle_dbg; // used to display debug stuff
     std::array<geometry_msgs::PoseStamped, 10> m_arucos;
