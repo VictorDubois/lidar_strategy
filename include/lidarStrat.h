@@ -67,10 +67,9 @@ private:
     sensor_msgs::LaserScan m_obstacle_dbg; // used to display debug stuff
     std::array<geometry_msgs::PoseStamped, 10> m_arucos;
 
-    ros::Publisher m_obstacle_danger_debuger;
     ros::Publisher m_obstacle_posestamped_pub;
     ros::Publisher m_obstacle_behind_posestamped_pub;
-    ros::Publisher m_obstacle_absolute_posestamped_pub;
+    ros::Publisher m_obstacle_debug_pub;
 
     ros::Subscriber m_lidar_sub;
     ros::Subscriber m_current_pose_sub;
