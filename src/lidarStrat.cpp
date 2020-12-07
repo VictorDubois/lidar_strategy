@@ -40,6 +40,7 @@ unsigned int LidarStrat::angleToId(Angle a)
 
 void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
 {
+    updateCurrentPose();
     m_obstacle_dbg = new_scan;
     std::fill(m_lidar_sensors_dists.begin(), m_lidar_sensors_dists.end(), m_max_distance);
 
@@ -56,6 +57,7 @@ void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
         }
         i++;
     }
+    m_laser_to_map_at_last_lidar_scan = m_laser_to_map;
 }
 
 unsigned int get_idx_of_max(const float vector[], const size_t len)
@@ -111,13 +113,13 @@ void LidarStrat::updateArucoObstacles(const geometry_msgs::PoseArray& newPoses)
  */
 float LidarStrat::speed_inhibition(Distance distance, Angle angle, float distanceCoeff)
 {
-    float slope_max = 0.3f;  // m. max slope of the braking distance modulation
-    float slope_min = 0.1f;  // m. min slope of the braking distance modulation
+    float slope_max = 0.1f;  // m. max slope of the braking distance modulation
+    float slope_min = 0.05f; // m. min slope of the braking distance modulation
     float slope = slope_max; // m. slope of the braking distance modulation
     float half_stop_min
-      = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
+      = 0.2f * distanceCoeff; // m. min distance at which we limit to half the full speed
     float half_stop_max
-      = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
+      = 0.3f * distanceCoeff;        // m. max distance at which we limit to half the full speed
     float half_stop = half_stop_max; // m distance at which we limit to half the full speed
     // We modulate the intensity of the inhibition based on the angle at which the obstacle is
     // seen: in front it is more dangerous than on the sides
@@ -125,7 +127,7 @@ float LidarStrat::speed_inhibition(Distance distance, Angle angle, float distanc
     half_stop = half_stop_min + (half_stop_max - half_stop_min) * angle_factor;
     slope = slope_min + (slope_max - slope_min) * angle_factor;
 
-    return (50.f * tanh((distance - half_stop) / slope) + 49.f) / 100.f;
+    return 0.5 * (1 + tanh((distance - half_stop) / slope));
 }
 
 void LidarStrat::sendObstaclePose(PolarPosition pp, bool reverseGear)
@@ -160,7 +162,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     float aruco_offset;
     nh.param<bool>("isBlue", m_is_blue, true);
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
-    nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.1f);
+    nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
@@ -422,7 +424,7 @@ void LidarStrat::run()
             {
                 PolarPosition obs_polar_local(m_lidar_sensors_dists[i], m_lidar_sensors_angles[i]);
                 Position obs_local(obs_polar_local);
-                Position obs_global = obs_local.transform(m_laser_to_map);
+                Position obs_global = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
                 Position obs_in_baselink = obs_global.transform(m_map_to_baselink);
 
                 bool allowed = isInsideTable(obs_global);
@@ -473,26 +475,31 @@ void LidarStrat::run()
             obstacles.push_back(closestPointSegmentLocal);
         }
 
-        if (!obstacles.empty())
+        size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
+        size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, false);
+
+        if (most_threateningId >= 0)
         {
-            size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
-            size_t most_threateningBehindId
-              = computeMostThreatening(obstacles, distanceCoeff, false);
-
-            if (most_threateningId >= 0)
-            {
-                const auto& obstacle_front = obstacles[most_threateningId];
-                ROS_DEBUG_STREAM("Nearest obstacle front = " << obstacle_front << std::endl);
-                sendObstaclePose(obstacle_front, false);
-            }
-
-            if (most_threateningBehindId >= 0)
-            {
-                const auto& obstacle_behind = obstacles[most_threateningBehindId];
-                ROS_DEBUG_STREAM("Nearest obstacle behind = " << obstacle_behind << std::endl);
-                sendObstaclePose(obstacle_behind, true);
-            }
+            const auto& obstacle_front = obstacles[most_threateningId];
+            ROS_DEBUG_STREAM("Nearest obstacle front = " << obstacle_front << std::endl);
+            sendObstaclePose(obstacle_front, false);
         }
+        else
+        {
+            sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), false);
+        }
+
+        if (most_threateningBehindId >= 0)
+        {
+            const auto& obstacle_behind = obstacles[most_threateningBehindId];
+            ROS_DEBUG_STREAM("Nearest obstacle behind = " << obstacle_behind << std::endl);
+            sendObstaclePose(obstacle_behind, true);
+        }
+        else
+        {
+            sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), true);
+        }
+
         if (m_obstacle_debug_pub.getNumSubscribers())
         {
             debugObstacle(debug_obstacles_msg, obstacles);
@@ -505,5 +512,5 @@ void LidarStrat::run()
     }
 
     // Print a message to let the user know the script exited cleanly
-    printf("Obstacles script exited cleanly\n");
+    ROS_INFO_STREAM("Obstacles Node exited cleanly");
 }

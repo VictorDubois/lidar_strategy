@@ -57,6 +57,7 @@ private:
     tf2_ros::Buffer m_tf_buffer;
     tf2_ros::TransformListener m_tf_listener;
     Transform3D m_laser_to_map;
+    Transform3D m_laser_to_map_at_last_lidar_scan;
     Transform3D m_baselink_to_map;
     Transform3D m_map_to_baselink;
     Pose m_current_pose;
