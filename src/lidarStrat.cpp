@@ -113,13 +113,13 @@ void LidarStrat::updateArucoObstacles(const geometry_msgs::PoseArray& newPoses)
  */
 float LidarStrat::speed_inhibition(Distance distance, Angle angle, float distanceCoeff)
 {
-    float slope_max = 0.1f;  // m. max slope of the braking distance modulation
-    float slope_min = 0.05f; // m. min slope of the braking distance modulation
+    float slope_max = 0.3f;  // m. max slope of the braking distance modulation
+    float slope_min = 0.1f;  // m. min slope of the braking distance modulation
     float slope = slope_max; // m. slope of the braking distance modulation
     float half_stop_min
-      = 0.2f * distanceCoeff; // m. min distance at which we limit to half the full speed
+      = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
     float half_stop_max
-      = 0.3f * distanceCoeff;        // m. max distance at which we limit to half the full speed
+      = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
     float half_stop = half_stop_max; // m distance at which we limit to half the full speed
     // We modulate the intensity of the inhibition based on the angle at which the obstacle is
     // seen: in front it is more dangerous than on the sides
