@@ -472,7 +472,7 @@ void LidarStrat::run()
             closest_point_of_segment(
               m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
             auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
-            obstacles.push_back(closestPointSegmentLocal);
+            // obstacles.push_back(closestPointSegmentLocal);
         }
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
