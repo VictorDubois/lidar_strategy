@@ -160,16 +160,19 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     float max_dist;
     float min_dist;
     float aruco_offset;
+    float border_offset;
     nh.param<bool>("isBlue", m_is_blue, true);
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
+    nh.param<float>("/strategy/border/offset", border_offset, -0.20f);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
 
     m_max_distance = Distance(max_dist);
     m_min_distance = Distance(min_dist);
     m_aruco_obs_offset = Distance(aruco_offset);
+    m_border_obs_offset = Distance(border_offset);
 
     m_arucos
       = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
@@ -472,7 +475,11 @@ void LidarStrat::run()
             closest_point_of_segment(
               m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
             auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
-            // obstacles.push_back(closestPointSegmentLocal);
+            auto shifted_position = PolarPosition(
+              Distance(max(closestPointSegmentLocal.getNorme() - m_border_obs_offset, 0.)),
+              closestPointSegmentLocal.getAngle());
+            Position closest_point(shifted_position);
+            obstacles.push_back(closest_point);
         }
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);

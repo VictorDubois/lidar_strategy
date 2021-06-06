@@ -37,8 +37,8 @@ private:
                                          Distance& xx,
                                          Distance& yy);
     int computeMostThreatening(const std::vector<PolarPosition>& points,
-                                  float distanceCoeff,
-                                  bool look_in_front);
+                               float distanceCoeff,
+                               bool look_in_front);
 
     void updateCurrentPose();
     void updateArucoObstacles(const geometry_msgs::PoseArray& newPoses);
@@ -53,6 +53,7 @@ private:
     float m_min_intensity;
     int m_nb_angular_steps;
     Distance m_aruco_obs_offset;
+    Distance m_border_obs_offset;
 
     tf2_ros::Buffer m_tf_buffer;
     tf2_ros::TransformListener m_tf_listener;
@@ -63,7 +64,7 @@ private:
     Pose m_current_pose;
 
     std::vector<Distance> m_lidar_sensors_dists; // in m
-    std::vector<Angle> m_lidar_sensors_angles; // in rad
+    std::vector<Angle> m_lidar_sensors_angles;   // in rad
     std::vector<PolarPosition> m_aruco_obstacles;
     sensor_msgs::LaserScan m_obstacle_dbg; // used to display debug stuff
     std::array<geometry_msgs::PoseStamped, 10> m_arucos;
