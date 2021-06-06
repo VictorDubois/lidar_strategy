@@ -164,7 +164,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
-    nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20);
+    nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
 
     m_max_distance = Distance(max_dist);
@@ -199,28 +199,28 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     if (m_is_blue)
     {
         m_arucos_sub[6] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/6", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 6));
+          "/pose_robots/6", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 6));
         m_arucos_sub[7] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/7", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 7));
+          "/pose_robots/7", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 7));
         m_arucos_sub[8] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/8", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 8));
+          "/pose_robots/8", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 8));
         m_arucos_sub[9] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/9", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 9));
+          "/pose_robots/9", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 9));
         m_arucos_sub[10] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/10", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 10));
+          "/pose_robots/10", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 10));
     }
     else
     {
         m_arucos_sub[1] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/1", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 1));
+          "/pose_robots/1", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 1));
         m_arucos_sub[2] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/2", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 2));
+          "/pose_robots/2", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 2));
         m_arucos_sub[3] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/3", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 3));
+          "/pose_robots/3", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 3));
         m_arucos_sub[4] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/4", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 4));
+          "/pose_robots/4", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 4));
         m_arucos_sub[5] = nh.subscribe<geometry_msgs::PoseStamped>(
-          "pose_robots/5", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 5));
+          "/pose_robots/5", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 5));
     }
 }
 
