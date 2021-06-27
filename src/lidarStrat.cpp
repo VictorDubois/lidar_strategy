@@ -167,8 +167,8 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
-    nh.param<float>("/strategy/border/offset", border_offset, -0.20f);
-    nh.param<float>("/strategy/fixes/offset", fixes_offset, 0.0f);
+    nh.param<float>("/strategy/border/offset", border_offset, -0.35f);
+    nh.param<float>("/strategy/fixes/offset", fixes_offset, -0.8f);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
 
     m_max_distance = Distance(max_dist);
