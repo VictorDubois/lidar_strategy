@@ -161,17 +161,20 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     float min_dist;
     float aruco_offset;
     float border_offset;
+    float fixes_offset;
     nh.param<bool>("isBlue", m_is_blue, true);
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
     nh.param<float>("/strategy/border/offset", border_offset, -0.20f);
+    nh.param<float>("/strategy/fixes/offset", fixes_offset, 0.0f);
     nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
 
     m_max_distance = Distance(max_dist);
     m_min_distance = Distance(min_dist);
     m_aruco_obs_offset = Distance(aruco_offset);
+    m_fixes_obs_offset = Distance(fixes_offset);
     m_border_obs_offset = Distance(border_offset);
 
     m_arucos
@@ -443,33 +446,36 @@ void LidarStrat::run()
             }
         }
 
-        std::vector<std::pair<Position, Position>> maps_segments;
+        std::vector<std::pair<Position, Position>> border_segments;
+        std::vector<std::pair<Position, Position>> fixes_segments;
         // Edges
-        maps_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
-        maps_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
-        maps_segments.push_back(std::make_pair(Position({ 1.5, 1 }), Position({ 1.5, -1 })));
-        maps_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
+        border_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
+        border_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
+        border_segments.push_back(std::make_pair(Position({ 1.5, 1 }), Position({ 1.5, -1 })));
+        border_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
         // Rocky zone
-        maps_segments.push_back(std::make_pair(Position({ -0, -1. }), Position({ 0, -0.7 })));
-        maps_segments.push_back(std::make_pair(Position({ -0.6, -1 }), Position({ -0.6, -0.850 })));
-        maps_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850 })));
+        fixes_segments.push_back(std::make_pair(Position({ -0, -1. }), Position({ 0, -0.7 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ -0.6, -1 }), Position({ -0.6, -0.850 })));
+        fixes_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850 })));
 
         for (const auto& aruco_pose : m_arucos)
         {
             // If the tag has been seen in the last two seconds
-            if (ros::Time::now() - aruco_pose.header.stamp < ros::Duration(2, 0))
+            if (ros::Time::now() - aruco_pose.header.stamp > ros::Duration(2, 0))
             {
-                auto position_local
-                  = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
-                auto shifted_position
-                  = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
-                                  position_local.getAngle());
-                Position closest_point(shifted_position);
-                obstacles.push_back(closest_point);
+                continue;
             }
+            ROS_DEBUG_STREAM("aruco obstacle seen");
+            auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
+            auto shifted_position
+              = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
+                              position_local.getAngle());
+            Position closest_point(shifted_position);
+            obstacles.push_back(closest_point);
         }
 
-        for (auto segment : maps_segments)
+        for (auto segment : border_segments)
         {
             Position closestPointSegment;
             closest_point_of_segment(
@@ -477,6 +483,19 @@ void LidarStrat::run()
             auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
             auto shifted_position = PolarPosition(
               Distance(max(closestPointSegmentLocal.getNorme() - m_border_obs_offset, 0.)),
+              closestPointSegmentLocal.getAngle());
+            Position closest_point(shifted_position);
+            obstacles.push_back(closest_point);
+        }
+
+        for (auto segment : fixes_segments)
+        {
+            Position closestPointSegment;
+            closest_point_of_segment(
+              m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
+            auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
+            auto shifted_position = PolarPosition(
+              Distance(max(closestPointSegmentLocal.getNorme() - m_fixes_obs_offset, 0.)),
               closestPointSegmentLocal.getAngle());
             Position closest_point(shifted_position);
             obstacles.push_back(closest_point);
@@ -510,7 +529,8 @@ void LidarStrat::run()
         if (m_obstacle_debug_pub.getNumSubscribers())
         {
             debugObstacle(debug_obstacles_msg, obstacles);
-            debugSegments(debug_obstacles_msg, maps_segments);
+            debugSegments(debug_obstacles_msg, border_segments);
+            debugSegments(debug_obstacles_msg, fixes_segments);
             m_obstacle_debug_pub.publish(debug_obstacles_msg);
         }
 

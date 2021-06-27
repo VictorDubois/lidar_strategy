@@ -54,6 +54,7 @@ private:
     int m_nb_angular_steps;
     Distance m_aruco_obs_offset;
     Distance m_border_obs_offset;
+    Distance m_fixes_obs_offset;
 
     tf2_ros::Buffer m_tf_buffer;
     tf2_ros::TransformListener m_tf_listener;
