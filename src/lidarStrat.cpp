@@ -457,21 +457,28 @@ void LidarStrat::run()
         /*fixes_segments.push_back(std::make_pair(Position({ -0, -1. }), Position({ 0, -0.7 })));
         fixes_segments.push_back(
           std::make_pair(Position({ -0.6, -1 }), Position({ -0.6, -0.850 })));
-        fixes_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850 })));*/
+        fixes_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850
+        })));*/
 
         // 2022
 
         // Supports statuette
-        fixes_segments.push_back(std::make_pair(Position({ -1.5, 0.49 }), Position({ -0.99, 1 })));
-        fixes_segments.push_back(std::make_pair(Position({ 1.5, 0.49 }), Position({ 0.99, 1 })));
+        /*fixes_segments.push_back(
+          std::make_pair(Position({ -1.5, -0.49 }), Position({ -0.99, -1 })));
+        fixes_segments.push_back(std::make_pair(Position({ 1.5, -0.49 }), Position({ 0.99, -1
+        })));*/
 
         // porte-hexagone equipe
-        fixes_segments.push_back(std::make_pair(Position({ 1.398, 0.325 }), Position({ 1.398, 0.175 })));
-        fixes_segments.push_back(std::make_pair(Position({ -1.398, 0.325 }), Position({ -1.398, 0.175 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ 1.398, 0.325 }), Position({ 1.398, 0.175 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ -1.398, 0.325 }), Position({ -1.398, 0.175 })));
 
         // porte-hexagone commun
-        fixes_segments.push_back(std::make_pair(Position({ 1.5-1.425, 0.9 }), Position({ 1.5-1.275, 0.9 })));
-        fixes_segments.push_back(std::make_pair(Position({ 1.425-1.5, 0.9 }), Position({ 1.275-1.5, 0.9 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ 1.5 - 1.425, 0.9 }), Position({ 1.5 - 1.275, 0.9 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ 1.425 - 1.5, 0.9 }), Position({ 1.275 - 1.5, 0.9 })));
 
         // separateur central
         fixes_segments.push_back(std::make_pair(Position({ 0, 1 }), Position({ 0, 0.7 })));
