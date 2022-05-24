@@ -40,11 +40,34 @@ unsigned int LidarStrat::angleToId(Angle a)
 
 void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
 {
+  int nb_valid_points = 0;
     updateCurrentPose();
     m_obstacle_dbg = new_scan;
+    unsigned int i = 0;
+    for (float angle = new_scan.angle_min; angle < new_scan.angle_max;
+         angle += new_scan.angle_increment)
+    {
+        unsigned int id = angleToId(Angle(angle));
+        if (new_scan.intensities[i] >= m_min_intensity
+            && Distance(new_scan.ranges[i]) > m_min_distance
+            && Distance(new_scan.ranges[i]) < m_max_distance)
+        {
+            nb_valid_points ++;
+        }
+        i++;
+    }
+    ROS_INFO_STREAM("updateLidarScan. nb valid points = " << nb_valid_points);
+
+    if (nb_valid_points < 30)
+    {
+      ROS_WARN_STREAM("Only " << nb_valid_points << " valid lidar points :(");
+      return;
+    }
+
+
     std::fill(m_lidar_sensors_dists.begin(), m_lidar_sensors_dists.end(), m_max_distance);
 
-    unsigned int i = 0;
+    i = 0;
     for (float angle = new_scan.angle_min; angle < new_scan.angle_max;
          angle += new_scan.angle_increment)
     {
@@ -418,6 +441,7 @@ void LidarStrat::run()
      *************************************************/
     while (ros::ok())
     {
+    	ROS_WARN_STREAM("main_loop");
         updateCurrentPose();
         std::vector<PolarPosition> obstacles;
 
