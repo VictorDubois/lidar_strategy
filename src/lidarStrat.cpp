@@ -11,7 +11,7 @@ void LidarStrat::updateCurrentPose()
     try
     {
         auto base_link_id = tf::resolve(ros::this_node::getNamespace(), "base_link");
-        auto laser_id = tf::resolve(ros::this_node::getNamespace(), "neato_laser");
+        auto laser_id = tf::resolve(ros::this_node::getNamespace(), "tim_top");
         const auto& transform
           = m_tf_buffer.lookupTransform("map", base_link_id, ros::Time(0)).transform;
         m_laser_to_map = transform3DFromMsg(
@@ -198,7 +198,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
       = nh.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     m_obstacle_debug_pub = nh.advertise<visualization_msgs::MarkerArray>("obstacle_debug", 5);
 
-    m_lidar_sub = nh.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
+    m_lidar_sub = nh.subscribe("scan_obstacles", 1000, &LidarStrat::updateLidarScan, this);
     m_aruco_obstacles_sub
       = nh.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
 
