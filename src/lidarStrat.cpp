@@ -470,9 +470,9 @@ void LidarStrat::run()
 
         // porte-hexagone equipe
         fixes_segments.push_back(
-          std::make_pair(Position({ 1.398, 0.325 }), Position({ 1.398, 0.175 })));
+          std::make_pair(Position({ 1.398, -0.325 }), Position({ 1.398, -0.175 })));
         fixes_segments.push_back(
-          std::make_pair(Position({ -1.398, 0.325 }), Position({ -1.398, 0.175 })));
+          std::make_pair(Position({ -1.398, -0.325 }), Position({ -1.398, -0.175 })));
 
         // porte-hexagone commun
         fixes_segments.push_back(
