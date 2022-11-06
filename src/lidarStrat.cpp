@@ -467,7 +467,7 @@ void LidarStrat::run()
           std::make_pair(Position({ -1.5, -0.49 }), Position({ -0.99, -1 })));
         fixes_segments.push_back(std::make_pair(Position({ 1.5, -0.49 }), Position({ 0.99, -1
         })));*/
-
+        /*
         // porte-hexagone equipe
         fixes_segments.push_back(
           std::make_pair(Position({ 1.398, -0.325 }), Position({ 1.398, -0.175 })));
@@ -482,6 +482,16 @@ void LidarStrat::run()
 
         // separateur central
         fixes_segments.push_back(std::make_pair(Position({ 0, 1 }), Position({ 0, 0.7 })));
+        */
+
+        // 2023
+
+        fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
+        fixes_segments.push_back(std::make_pair(Position({ -1.5, 0 }), Position({ -1.35, 0 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ -0.15, -1 + 0.015 }), Position({ 0.15, -1 + 0.015 })));
+        fixes_segments.push_back(
+          std::make_pair(Position({ -0.15, 1 - 0.015 }), Position({ 0.15, 1 - 0.015 })));
 
         for (const auto& aruco_pose : m_arucos)
         {
