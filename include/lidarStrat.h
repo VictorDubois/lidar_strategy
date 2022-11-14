@@ -52,6 +52,7 @@ private:
     Distance m_max_distance;
     float m_min_intensity;
     int m_nb_angular_steps;
+    Distance m_lidar_obs_offset;
     Distance m_aruco_obs_offset;
     Distance m_border_obs_offset;
     Distance m_fixes_obs_offset;

@@ -159,6 +159,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
 
     float max_dist;
     float min_dist;
+    float lidar_offset;
     float aruco_offset;
     float border_offset;
     float fixes_offset;
@@ -166,6 +167,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
+    nh.param<float>("/strategy/lidar/offset", lidar_offset, 0.20f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
     nh.param<float>("/strategy/border/offset", border_offset, -0.35f);
     nh.param<float>("/strategy/fixes/offset", fixes_offset, -0.08f);
@@ -174,6 +176,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     m_max_distance = Distance(max_dist);
     m_min_distance = Distance(min_dist);
     m_aruco_obs_offset = Distance(aruco_offset);
+    m_lidar_obs_offset = Distance(lidar_offset);
     m_fixes_obs_offset = Distance(fixes_offset);
     m_border_obs_offset = Distance(border_offset);
 
@@ -428,6 +431,7 @@ void LidarStrat::run()
             if (m_lidar_sensors_dists[i] < m_max_distance
                 && m_lidar_sensors_dists[i] > m_min_distance)
             {
+                // Compute position a first time, to see if the obstacle is inside the table
                 PolarPosition obs_polar_local(m_lidar_sensors_dists[i], m_lidar_sensors_angles[i]);
                 Position obs_local(obs_polar_local);
                 Position obs_global = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
@@ -441,6 +445,14 @@ void LidarStrat::run()
 
                 if (allowed)
                 {
+                    // Recompute with an offset (=margin if the robot is coming toward us)
+                    PolarPosition obs_polar_local_with_offset(
+                      Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
+                      m_lidar_sensors_angles[i]);
+                    Position obs_local_with_offset(obs_polar_local);
+                    Position obs_global_with_offset
+                      = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
+                    Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
                     obstacles.push_back(obs_in_baselink);
                 }
             }
