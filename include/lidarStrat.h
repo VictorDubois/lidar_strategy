@@ -40,6 +40,8 @@ private:
                                float distanceCoeff,
                                bool look_in_front);
 
+    void sendDynamicObstacles(std::vector<PolarPosition> obstacles);
+
     void updateCurrentPose();
     void updateArucoObstacles(const geometry_msgs::PoseArray& newPoses);
     void updateAruco(const boost::shared_ptr<geometry_msgs::PoseStamped const> arucoPose, int id);
@@ -74,6 +76,7 @@ private:
     ros::Publisher m_obstacle_posestamped_pub;
     ros::Publisher m_obstacle_behind_posestamped_pub;
     ros::Publisher m_obstacle_debug_pub;
+    ros::Publisher m_dynamic_posestampedarray_pub;
 
     ros::Subscriber m_lidar_sub;
     ros::Subscriber m_current_pose_sub;

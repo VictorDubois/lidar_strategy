@@ -200,6 +200,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     m_obstacle_behind_posestamped_pub
       = nh.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     m_obstacle_debug_pub = nh.advertise<visualization_msgs::MarkerArray>("obstacle_debug", 5);
+    m_dynamic_posestampedarray_pub = nh.advertise<geometry_msgs::PoseArray>("dynamic_obstacles", 5);
 
     m_lidar_sub = nh.subscribe("scan_obstacles", 1000, &LidarStrat::updateLidarScan, this);
     m_aruco_obstacles_sub
@@ -410,6 +411,20 @@ void debugSegments(visualization_msgs::MarkerArray& ma,
     ma.markers.push_back(m);
 }
 
+void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
+{
+    geometry_msgs::PoseArray dynamic_obstacles_poses = geometry_msgs::PoseArray();
+    dynamic_obstacles_poses.header.frame_id = "map";
+
+    for (auto position : obstacles)
+    {
+        geometry_msgs::Pose dynamic_obstacle_pose = Pose(Position(position), Angle(0));
+
+        dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
+    }
+    m_dynamic_posestampedarray_pub.publish(dynamic_obstacles_poses);
+}
+
 void LidarStrat::run()
 {
     float distanceCoeff = 1;
@@ -458,6 +473,25 @@ void LidarStrat::run()
             }
         }
 
+        for (const auto& aruco_pose : m_arucos)
+        {
+            // If the tag has been seen in the last two seconds
+            if (ros::Time::now() - aruco_pose.header.stamp > ros::Duration(2, 0))
+            {
+                continue;
+            }
+            ROS_DEBUG_STREAM("aruco obstacle seen");
+            auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
+            auto shifted_position
+              = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
+                              position_local.getAngle());
+            Position closest_point(shifted_position);
+            obstacles.push_back(closest_point);
+        }
+
+        // end of dynamic obstacles => send them before adding static obstacles
+        sendDynamicObstacles(obstacles);
+
         std::vector<std::pair<Position, Position>> border_segments;
         std::vector<std::pair<Position, Position>> fixes_segments;
         // Edges
@@ -504,22 +538,6 @@ void LidarStrat::run()
           std::make_pair(Position({ -0.15, -1 + 0.015 }), Position({ 0.15, -1 + 0.015 })));
         fixes_segments.push_back(
           std::make_pair(Position({ -0.15, 1 - 0.015 }), Position({ 0.15, 1 - 0.015 })));
-
-        for (const auto& aruco_pose : m_arucos)
-        {
-            // If the tag has been seen in the last two seconds
-            if (ros::Time::now() - aruco_pose.header.stamp > ros::Duration(2, 0))
-            {
-                continue;
-            }
-            ROS_DEBUG_STREAM("aruco obstacle seen");
-            auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
-            auto shifted_position
-              = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
-                              position_local.getAngle());
-            Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
-        }
 
         for (auto segment : border_segments)
         {
