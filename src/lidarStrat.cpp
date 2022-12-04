@@ -538,6 +538,10 @@ void LidarStrat::run()
 
         // 2023
 
+        // Test contournement
+        fixes_segments.push_back(std::make_pair(Position({ 0.1, 0 }), Position({ -0.1, 0 })));
+
+        /*
         fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
         fixes_segments.push_back(std::make_pair(Position({ -1.5, 0 }), Position({ -1.35, 0 })));
         fixes_segments.push_back(
@@ -556,7 +560,7 @@ void LidarStrat::run()
               closestPointSegmentLocal.getAngle());
             Position closest_point(shifted_position);
             obstacles.push_back(closest_point);
-        }
+        }*/
 
         for (auto segment : fixes_segments)
         {
