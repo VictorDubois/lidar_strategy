@@ -439,6 +439,12 @@ void LidarStrat::run()
         updateCurrentPose();
         std::vector<PolarPosition> obstacles;
 
+        // Obstacles very far away, in case there is no obstacle.
+        obstacles.push_back(PolarPosition(Distance(10000), Angle(0)));
+        obstacles.push_back(PolarPosition(Distance(10000), Angle(90)));
+        obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
+        obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
+
         visualization_msgs::MarkerArray debug_obstacles_msg;
 
         for (size_t i = 0; i < m_nb_angular_steps; i += 1)
