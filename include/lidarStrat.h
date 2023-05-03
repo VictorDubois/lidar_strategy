@@ -3,6 +3,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <krabi_msgs/obstacles.h>
 #include <map>
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
@@ -21,6 +22,7 @@ public:
     void run();
     static float speed_inhibition(Distance distance, Angle angle, float distanceCoeff);
 
+    enum ObstacleType { TYPE_LIDAR=0, TYPE_ROBOT_ARUCO=1, TYPE_FIX_OBSTACLE=2, TYPE_BORDER_OBSTACLE=3, TYPE_NO_OBSTACLE=4 };
 private:
     void sendObstaclePose(PolarPosition pp, bool reverseGear);
     void updateLidarScan(const sensor_msgs::LaserScan& new_scan);
@@ -36,11 +38,11 @@ private:
                                          const Distance y2,
                                          Distance& xx,
                                          Distance& yy);
-    int computeMostThreatening(const std::vector<PolarPosition>& points,
+    int computeMostThreatening(const std::vector<std::pair<PolarPosition, ObstacleType>>& points,
                                float distanceCoeff,
                                bool look_in_front);
 
-    void sendDynamicObstacles(std::vector<PolarPosition> obstacles);
+    void sendDynamicObstacles(std::vector<std::pair<PolarPosition, ObstacleType>> obstacles);
 
     void updateCurrentPose();
     void updateArucoObstacles(const geometry_msgs::PoseArray& newPoses);
@@ -66,6 +68,7 @@ private:
     Transform3D m_baselink_to_map;
     Transform3D m_map_to_baselink;
     Pose m_current_pose;
+    krabi_msgs::obstacles m_detailed_obstacles;
 
     std::vector<Distance> m_lidar_sensors_dists; // in m
     std::vector<Angle> m_lidar_sensors_angles;   // in rad
@@ -77,6 +80,7 @@ private:
     ros::Publisher m_obstacle_behind_posestamped_pub;
     ros::Publisher m_obstacle_debug_pub;
     ros::Publisher m_dynamic_posestampedarray_pub;
+    ros::Publisher m_detailed_obstacles_pub;
 
     ros::Subscriber m_lidar_sub;
     ros::Subscriber m_current_pose_sub;
