@@ -167,7 +167,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
     nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
     nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
-    nh.param<float>("/strategy/lidar/offset", lidar_offset, 0.20f);
+    nh.param<float>("/strategy/lidar/offset", lidar_offset, 0.40f);
     nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
     nh.param<float>("/strategy/border/offset", border_offset, -0.35f);
     nh.param<float>("/strategy/fixes/offset", fixes_offset, -0.08f);
@@ -201,6 +201,7 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
       = nh.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
     m_obstacle_debug_pub = nh.advertise<visualization_msgs::MarkerArray>("obstacle_debug", 5);
     m_dynamic_posestampedarray_pub = nh.advertise<geometry_msgs::PoseArray>("dynamic_obstacles", 5);
+    m_detailed_obstacles_pub = nh.advertise<krabi_msgs::obstacles>("detailed_obstacles", 5);
 
     m_lidar_sub = nh.subscribe("scan_obstacles", 1000, &LidarStrat::updateLidarScan, this);
     m_aruco_obstacles_sub
@@ -302,7 +303,7 @@ bool is_in_back(Angle a)
     return abs(AngleTools::diffAngle(a, Angle(M_PI))) < AngleTools::deg2rad(AngleDeg(60));
 }
 
-int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacles,
+int LidarStrat::computeMostThreatening(const std::vector<pair<PolarPosition, ObstacleType>>& obstacles,
                                        float distanceCoeff,
                                        bool look_in_front)
 {
@@ -314,7 +315,7 @@ int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacl
 
     for (size_t i = 0; i < obstacles.size(); i++)
     {
-        const auto& obstacle = obstacles[i];
+        const auto& obstacle = obstacles[i].first;
         // Only detect in front of the current direction
         if ((!look_in_front && !is_in_back(obstacle.getAngle()))
             || (look_in_front && !is_in_front(obstacle.getAngle())))
@@ -323,11 +324,11 @@ int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacl
         }
 
         Angle normalized_angle = look_in_front
-                                   ? obstacles[i].getAngle()
-                                   : AngleTools::wrapAngle(Angle(obstacles[i].getAngle() + M_PI));
+                                   ? obstacles[i].first.getAngle()
+                                   : AngleTools::wrapAngle(Angle(obstacles[i].first.getAngle() + M_PI));
 
         float speed_inhibition_coeff
-          = speed_inhibition(obstacles[i].getDistance(), normalized_angle, distanceCoeff);
+          = speed_inhibition(obstacles[i].first.getDistance(), normalized_angle, distanceCoeff);
 
         if (speed_inhibition_coeff < currentMostThreateningSpeedInhibition)
         {
@@ -344,7 +345,7 @@ bool LidarStrat::isInsideTable(const Position& input)
            && input.getY() > -0.95;
 }
 
-void debugObstacle(visualization_msgs::MarkerArray& ma, const std::vector<PolarPosition>& obstacles)
+void debugObstacle(visualization_msgs::MarkerArray& ma, const std::vector<pair<PolarPosition, LidarStrat::ObstacleType>>& obstacles)
 {
     uint i = ma.markers.size();
     auto frame_id = tf::resolve(ros::this_node::getNamespace(), "base_link");
@@ -373,7 +374,7 @@ void debugObstacle(visualization_msgs::MarkerArray& ma, const std::vector<PolarP
     m.frame_locked = true;
     for (const auto& obs : obstacles)
     {
-        m.points.push_back(Position(obs));
+        m.points.push_back(Position(obs.first));
     }
     ma.markers.push_back(m);
 }
@@ -411,14 +412,14 @@ void debugSegments(visualization_msgs::MarkerArray& ma,
     ma.markers.push_back(m);
 }
 
-void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
+void LidarStrat::sendDynamicObstacles(std::vector<pair<PolarPosition, ObstacleType>> obstacles)
 {
     geometry_msgs::PoseArray dynamic_obstacles_poses = geometry_msgs::PoseArray();
     dynamic_obstacles_poses.header.frame_id = "map";
 
     for (auto position : obstacles)
     {
-        geometry_msgs::Pose dynamic_obstacle_pose = Pose(Position(position), Angle(0));
+        geometry_msgs::Pose dynamic_obstacle_pose = Pose(Position(position.first), Angle(0));
 
         dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
     }
@@ -437,13 +438,13 @@ void LidarStrat::run()
     while (ros::ok())
     {
         updateCurrentPose();
-        std::vector<PolarPosition> obstacles;
+        std::vector<std::pair<PolarPosition, ObstacleType>> obstacles;
 
         // Obstacles very far away, in case there is no obstacle.
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(0)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(90)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
+        obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(PolarPosition(Distance(10000), Angle(0)), ObstacleType::TYPE_NO_OBSTACLE));
+        obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(PolarPosition(Distance(10000), Angle(90)), ObstacleType::TYPE_NO_OBSTACLE));
+        obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(PolarPosition(Distance(10000), Angle(180)), ObstacleType::TYPE_NO_OBSTACLE));
+        obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(PolarPosition(Distance(10000), Angle(270)), ObstacleType::TYPE_NO_OBSTACLE));
 
         visualization_msgs::MarkerArray debug_obstacles_msg;
 
@@ -468,13 +469,13 @@ void LidarStrat::run()
                 {
                     // Recompute with an offset (=margin if the robot is coming toward us)
                     PolarPosition obs_polar_local_with_offset(
-                      Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
+                      Distance(max(0., m_lidar_sensors_dists[i] - m_lidar_obs_offset)),
                       m_lidar_sensors_angles[i]);
                     Position obs_local_with_offset(obs_polar_local);
                     Position obs_global_with_offset
                       = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
                     Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
-                    obstacles.push_back(obs_in_baselink);
+                    obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(obs_in_baselink, ObstacleType::TYPE_LIDAR));
                 }
             }
         }
@@ -492,7 +493,8 @@ void LidarStrat::run()
               = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
                               position_local.getAngle());
             Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
+            obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(closest_point, ObstacleType::TYPE_ROBOT_ARUCO));
+
         }
 
         // end of dynamic obstacles => send them before adding static obstacles
@@ -565,7 +567,7 @@ void LidarStrat::run()
               Distance(max(closestPointSegmentLocal.getNorme() - m_border_obs_offset, 0.)),
               closestPointSegmentLocal.getAngle());
             Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
+            obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(closest_point, ObstacleType::TYPE_BORDER_OBSTACLE));
         }
 
         for (auto segment : fixes_segments)
@@ -578,7 +580,7 @@ void LidarStrat::run()
               Distance(max(closestPointSegmentLocal.getNorme() - m_fixes_obs_offset, 0.)),
               closestPointSegmentLocal.getAngle());
             Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
+            obstacles.push_back(std::make_pair<PolarPosition, ObstacleType>(closest_point, ObstacleType::TYPE_FIX_OBSTACLE));
         }
 
         size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
@@ -586,7 +588,7 @@ void LidarStrat::run()
 
         if (most_threateningId >= 0)
         {
-            const auto& obstacle_front = obstacles[most_threateningId];
+            const auto& obstacle_front = obstacles[most_threateningId].first;
             ROS_DEBUG_STREAM("Nearest obstacle front = " << obstacle_front << std::endl);
             sendObstaclePose(obstacle_front, false);
         }
@@ -597,7 +599,7 @@ void LidarStrat::run()
 
         if (most_threateningBehindId >= 0)
         {
-            const auto& obstacle_behind = obstacles[most_threateningBehindId];
+            const auto& obstacle_behind = obstacles[most_threateningBehindId].first;
             ROS_DEBUG_STREAM("Nearest obstacle behind = " << obstacle_behind << std::endl);
             sendObstaclePose(obstacle_behind, true);
         }
