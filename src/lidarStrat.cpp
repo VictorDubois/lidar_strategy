@@ -470,9 +470,26 @@ void LidarStrat::run()
                     PolarPosition obs_polar_local_with_offset(
                       Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
                       m_lidar_sensors_angles[i]);
+
+                    
                     Position obs_local_with_offset(obs_polar_local);
                     Position obs_global_with_offset
                       = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
+
+                    // Enlarge the other robots' perimeter, as a margin of safety
+                    const Distance l_rayon_robot_adverse = Distance(0.2);
+                    std::vector<Position> l_tour_robot_adverse;
+                    for (float l_angle = 0; l_angle < 2*M_PI; l_angle += M_PI/4)
+                    {
+                        Position l_point_tour_robot_adverse = Position(obs_global);
+                        l_point_tour_robot_adverse.setX(Distance(l_point_tour_robot_adverse.getX() + l_rayon_robot_adverse * sin(l_angle)));
+                        l_point_tour_robot_adverse.setY(Distance(l_point_tour_robot_adverse.getY() + l_rayon_robot_adverse * cos(l_angle)));
+                        l_tour_robot_adverse.push_back(l_point_tour_robot_adverse);
+
+                        Position l_point_tour_robot_adverse_in_baselink = l_point_tour_robot_adverse.transform(m_map_to_baselink);
+                        obstacles.push_back(l_point_tour_robot_adverse_in_baselink);
+                    }
+                    
                     Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
                     obstacles.push_back(obs_in_baselink);
                 }
