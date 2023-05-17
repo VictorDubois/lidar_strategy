@@ -418,7 +418,10 @@ void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
 
     for (auto position : obstacles)
     {
-        geometry_msgs::Pose dynamic_obstacle_pose = Pose(Position(position), Angle(0));
+        Position l_obstacle_position = Position(position); // cartesian, local to robot
+
+        l_obstacle_position = l_obstacle_position.transform(m_baselink_to_map); // in map frame
+        geometry_msgs::Pose dynamic_obstacle_pose = Pose(l_obstacle_position, Angle(0));
 
         dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
     }
