@@ -82,4 +82,6 @@ private:
     ros::Subscriber m_current_pose_sub;
     ros::Subscriber m_aruco_obstacles_sub;
     std::map<int, ros::Subscriber> m_arucos_sub;
+
+    ros::Time m_timeout_next_publish_dynamic_obst;
 };

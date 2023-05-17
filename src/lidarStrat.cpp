@@ -232,6 +232,8 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
         m_arucos_sub[5] = nh.subscribe<geometry_msgs::PoseStamped>(
           "/pose_robots/5", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 5));
     }
+
+    m_timeout_next_publish_dynamic_obst = ros::Time::now();
 }
 
 void LidarStrat::closest_point_of_segment(const Position& point,
@@ -516,7 +518,12 @@ void LidarStrat::run()
         }
 
         // end of dynamic obstacles => send them before adding static obstacles
-        sendDynamicObstacles(obstacles);
+        if (ros::Time::now() > m_timeout_next_publish_dynamic_obst)
+        {
+            // only send them at 1hz, it is quite heavy
+            sendDynamicObstacles(obstacles);
+            m_timeout_next_publish_dynamic_obst = ros::Time::now() + ros::Duration(1.f);
+        }
 
         std::vector<std::pair<Position, Position>> border_segments;
         std::vector<std::pair<Position, Position>> fixes_segments;
