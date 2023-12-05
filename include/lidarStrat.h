@@ -5,11 +5,11 @@
 
 #define TRUE 1
 #define FALSE 0
-#include "geometry_msgs/Pose.h"
-#include "geometry_msgs/PoseArray.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "sensor_msgs/LaserScan.h"
-#include <ros/ros.h>
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include <vector>
 
 #include "Krabi/position.h"
