@@ -50,8 +50,8 @@ private:
                                   float distanceCoeff,
                                   bool reverseGear);
 
-    void updateCurrentPose(geometry_msgs::Pose newPose);
-    void updateArucoObstacles(geometry_msgs::PoseArray newPoses);
+    void updateCurrentPose(geometry_msgs::msg::Pose newPose);
+    void updateArucoObstacles(geometry_msgs::msg::PoseArray newPoses);
     bool isInsideTable(Position input);
     Position toAbsolute(Position input);
 

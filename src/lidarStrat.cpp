@@ -20,7 +20,7 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-void LidarStrat::updateCurrentPose(geometry_msgs::Pose newPose)
+void LidarStrat::updateCurrentPose(geometry_msgs::msg::Pose newPose)
 {
     currentPose = PositionPlusAngle(newPose);
     std::cout << "updateCurrentPose: x = " << currentPose.getPosition().getX()
@@ -112,7 +112,7 @@ void cart_to_polar(const float posX, const float posY, float& theta, float& dist
 #endif
 }
 
-void LidarStrat::updateArucoObstacles(geometry_msgs::PoseArray newPoses)
+void LidarStrat::updateArucoObstacles(geometry_msgs::msg::PoseArray newPoses)
 {
     aruco_obstacles.clear();
     for (auto pose : newPoses.poses)
@@ -164,13 +164,13 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle,
                                   float obstacle_distance,
                                   bool reverseGear)
 {
-    geometry_msgs::Pose obstacle_pose;
+    geometry_msgs::msg::Pose obstacle_pose;
     float posX;
     float posY;
     polar_to_cart(posX, posY, nearest_obstacle_angle, obstacle_distance);
     obstacle_pose.position.x = static_cast<double>(posX);
     obstacle_pose.position.y = static_cast<double>(posY);
-    geometry_msgs::PoseStamped obstacle_pose_stamped;
+    geometry_msgs::msg::PoseStamped obstacle_pose_stamped;
     obstacle_pose_stamped.pose = obstacle_pose;
     obstacle_pose_stamped.header.frame_id
       = "base_link"; // base_link for robot, neato_laser for logs/debug
@@ -206,11 +206,11 @@ LidarStrat::LidarStrat(int argc, char* argv[])
 
     ros::NodeHandle n;
     obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
-    obstacle_posestamped_pub = n.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_posestamped_pub = n.advertise<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
     obstacle_Absolute_posestamped_pub
-      = n.advertise<geometry_msgs::PoseArray>("obstacle_absolute_pose_stamped", 5);
+      = n.advertise<geometry_msgs::msg::PoseArray>("obstacle_absolute_pose_stamped", 5);
     obstacle_behind_posestamped_pub
-      = n.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
+      = n.advertise<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
     lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
     current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
     aruco_obstacles_sub
@@ -338,7 +338,7 @@ void LidarStrat::run()
 
         obstacles.push_back(std::make_pair<float, float>(1000, 0)); // Have at least one obstacle
 
-        geometry_msgs::PoseArray absoluteObstacles;
+        geometry_msgs::msg::PoseArray absoluteObstacles;
         absoluteObstacles.header.frame_id = "odom";
 
         for (size_t i = 0; i < NB_MEASURES_LIDAR; i += 1)
@@ -370,7 +370,7 @@ void LidarStrat::run()
                       << ", allowed = " << allowed << std::endl;
             std::cout << std::endl;
 
-            geometry_msgs::Pose absolutePose;
+            geometry_msgs::msg::Pose absolutePose;
             absolutePose.position = vodka.getPoint();
             // allowed = true;
             absolutePose.position.z = 0.0;
