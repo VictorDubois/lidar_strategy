@@ -15,7 +15,7 @@
 #include "Krabi/position.h"
 #include "Krabi/positionPlusAngle.h"
 
-class LidarStrat : public rclcpp::Node
+class LidarStrat 
 {
 
 public:
@@ -62,6 +62,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr current_pose_sub;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr aruco_obstacles_sub;
+    rclcpp::Node::SharedPtr node;
 };
 
 #endif

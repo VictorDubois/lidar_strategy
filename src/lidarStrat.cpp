@@ -187,12 +187,13 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle,
     // obstacle_pose.position.y << std::endl;
 }
 
-LidarStrat::LidarStrat(int argc, char* argv[]) : Node("lidarStrat")
+LidarStrat::LidarStrat(int argc, char* argv[]) 
 {
     printf("[LIDAR] Begin main\n");
     fflush(stdout);
 
     rclcpp::init(argc, argv);
+    node = rclcpp::Node::make_shared("lidarStrat");
 
     for (int i = 0; i < NB_MEASURES_LIDAR; i++)
     {
@@ -204,13 +205,13 @@ LidarStrat::LidarStrat(int argc, char* argv[]) : Node("lidarStrat")
     aruco_obstacles.clear();
 
    
-    obstacle_danger_debuger = this->create_publisher<sensor_msgs::msg::LaserScan>("obstacle_dbg", 5);
-    obstacle_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
-    obstacle_Absolute_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseArray>("obstacle_absolute_pose_stamped", 5);
-    obstacle_behind_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
-    lidar_sub = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 1000,std::bind(&LidarStrat::updateLidarScan, this,std::placeholders::_1));
-    current_pose_sub = this->create_subscription<geometry_msgs::msg::Pose>("current_pose", 5, std::bind(&LidarStrat::updateCurrentPose, this,std::placeholders::_1));
-    aruco_obstacles_sub = this->create_subscription<geometry_msgs::msg::PoseArray>("aruco_obstacles", 5, std::bind(&LidarStrat::updateArucoObstacles, this,std::placeholders::_1));
+    obstacle_danger_debuger = node->create_publisher<sensor_msgs::msg::LaserScan>("obstacle_dbg", 5);
+    obstacle_posestamped_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_Absolute_posestamped_pub = node->create_publisher<geometry_msgs::msg::PoseArray>("obstacle_absolute_pose_stamped", 5);
+    obstacle_behind_posestamped_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
+    lidar_sub = node->create_subscription<sensor_msgs::msg::LaserScan>("scan", 1000,std::bind(&LidarStrat::updateLidarScan, this,std::placeholders::_1));
+    current_pose_sub = node->create_subscription<geometry_msgs::msg::Pose>("current_pose", 5, std::bind(&LidarStrat::updateCurrentPose, this,std::placeholders::_1));
+    aruco_obstacles_sub = node->create_subscription<geometry_msgs::msg::PoseArray>("aruco_obstacles", 5, std::bind(&LidarStrat::updateArucoObstacles, this,std::placeholders::_1));
 }
 
 void LidarStrat::ClosestPointOfSegment(const Position& segment1,
@@ -422,8 +423,7 @@ void LidarStrat::run()
 
         obstacle_danger_debuger->publish(obstacle_dbg);
 
-        rclcpp::spin_some();
-        //this->spin_some();
+        rclcpp::spin_some(node);
         loop_rate.sleep();
     }
 
