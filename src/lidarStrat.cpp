@@ -27,7 +27,7 @@ void LidarStrat::updateCurrentPose(geometry_msgs::msg::Pose newPose)
               << ", y = " << currentPose.getPosition().getY() << std::endl;
 }
 
-void LidarStrat::updateLidarScan(sensor_msgs::LaserScan new_scan)
+void LidarStrat::updateLidarScan(sensor_msgs::msg::LaserScan new_scan)
 {
     obstacle_dbg = new_scan;
     for (size_t i = 0; i < NB_MEASURES_LIDAR; i++)
@@ -177,23 +177,22 @@ void LidarStrat::sendObstaclePose(float nearest_obstacle_angle,
 
     if (reverseGear)
     {
-        obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
+        obstacle_behind_posestamped_pub->publish(obstacle_pose_stamped);
     }
     else
     {
-        obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+        obstacle_posestamped_pub->publish(obstacle_pose_stamped);
     }
     // std::cout << "cart X = " << obstacle_pose.position.x << ", Y = " <<
     // obstacle_pose.position.y << std::endl;
 }
 
-LidarStrat::LidarStrat(int argc, char* argv[])
+LidarStrat::LidarStrat(int argc, char* argv[]) : Node("lidarStrat")
 {
     printf("[LIDAR] Begin main\n");
     fflush(stdout);
 
-    ros::init(argc, argv, "lidarStrat");
-    ros::start();
+    rclcpp::init(argc, argv);
 
     for (int i = 0; i < NB_MEASURES_LIDAR; i++)
     {
@@ -204,17 +203,14 @@ LidarStrat::LidarStrat(int argc, char* argv[])
     }
     aruco_obstacles.clear();
 
-    ros::NodeHandle n;
-    obstacle_danger_debuger = n.advertise<sensor_msgs::LaserScan>("obstacle_dbg", 5);
-    obstacle_posestamped_pub = n.advertise<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
-    obstacle_Absolute_posestamped_pub
-      = n.advertise<geometry_msgs::msg::PoseArray>("obstacle_absolute_pose_stamped", 5);
-    obstacle_behind_posestamped_pub
-      = n.advertise<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
-    lidar_sub = n.subscribe("scan", 1000, &LidarStrat::updateLidarScan, this);
-    current_pose_sub = n.subscribe("current_pose", 5, &LidarStrat::updateCurrentPose, this);
-    aruco_obstacles_sub
-      = n.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
+   
+    obstacle_danger_debuger = this->create_publisher<sensor_msgs::msg::LaserScan>("obstacle_dbg", 5);
+    obstacle_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
+    obstacle_Absolute_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseArray>("obstacle_absolute_pose_stamped", 5);
+    obstacle_behind_posestamped_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
+    lidar_sub = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 1000,std::bind(&LidarStrat::updateLidarScan, this,std::placeholders::_1));
+    current_pose_sub = this->create_subscription<geometry_msgs::msg::Pose>("current_pose", 5, std::bind(&LidarStrat::updateCurrentPose, this,std::placeholders::_1));
+    aruco_obstacles_sub = this->create_subscription<geometry_msgs::msg::PoseArray>("aruco_obstacles", 5, std::bind(&LidarStrat::updateArucoObstacles, this,std::placeholders::_1));
 }
 
 void LidarStrat::ClosestPointOfSegment(const Position& segment1,
@@ -326,13 +322,13 @@ bool LidarStrat::isInsideTable(Position input)
 void LidarStrat::run()
 {
     float distanceCoeff = 1;
-    ros::Rate loop_rate(5);
+    rclcpp::Rate loop_rate(5);
     std::vector<float> sensors_dists;
 
     /*************************************************
      *                   Main loop                   *
      *************************************************/
-    while (ros::ok())
+    while (rclcpp::ok())
     {
         std::vector<PolarPosition> obstacles;
 
@@ -382,7 +378,7 @@ void LidarStrat::run()
             }
             absoluteObstacles.poses.push_back(absolutePose);
         }
-        obstacle_Absolute_posestamped_pub.publish(absoluteObstacles);
+        obstacle_Absolute_posestamped_pub->publish(absoluteObstacles);
 
         std::vector<std::pair<Position, Position>> maps_segments;
         maps_segments.push_back(std::make_pair(Position(0, 0), Position(3000, 0)));
@@ -424,9 +420,10 @@ void LidarStrat::run()
         // @Todo check transformation: "+180" might be just needed because we use "neato_lidar" as
         // frame
 
-        obstacle_danger_debuger.publish(obstacle_dbg);
+        obstacle_danger_debuger->publish(obstacle_dbg);
 
-        ros::spinOnce();
+        rclcpp::spin_some();
+        //this->spin_some();
         loop_rate.sleep();
     }
 
