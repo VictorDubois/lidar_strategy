@@ -10,14 +10,14 @@ void LidarStrat::updateCurrentPose()
 {
     try
     {
-        auto base_link_id = tf::resolve(ros::this_node::getNamespace(), "base_link");
-        auto laser_id = tf::resolve(ros::this_node::getNamespace(), "tim_top");
+        auto base_link_id = tf::resolve(rclcpp::this_node::getNamespace(), "base_link");
+        auto laser_id = tf::resolve(rclcpp::this_node::getNamespace(), "tim_top");
         const auto& transform
-          = m_tf_buffer.lookupTransform("map", base_link_id, ros::Time(0)).transform;
+          = m_tf_buffer.lookupTransform("map", base_link_id, rclcpp::Time(0)).transform;
         m_laser_to_map = transform3DFromMsg(
-          m_tf_buffer.lookupTransform("map", laser_id, ros::Time(0)).transform);
+          m_tf_buffer.lookupTransform("map", laser_id, rclcpp::Time(0)).transform);
         m_map_to_baselink = transform3DFromMsg(
-          m_tf_buffer.lookupTransform(base_link_id, "map", ros::Time(0)).transform);
+          m_tf_buffer.lookupTransform(base_link_id, "map", rclcpp::Time(0)).transform);
         m_baselink_to_map = transform3DFromMsg(transform);
         m_current_pose = Pose(transform);
     }
@@ -38,7 +38,7 @@ unsigned int LidarStrat::angleToId(Angle a)
            % m_nb_angular_steps;
 }
 
-void LidarStrat::updateLidarScan(const sensor_msgs::LaserScan& new_scan)
+void LidarStrat::updateLidarScan(const sensor_msgs::msg::LaserScan& new_scan)
 {
     updateCurrentPose();
     m_obstacle_dbg = new_scan;
@@ -85,7 +85,7 @@ float compute_dangerousness_from_angle(Angle a)
     return sin(a) / a;
 }
 
-void LidarStrat::updateArucoObstacles(const geometry_msgs::PoseArray& newPoses)
+void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPoses)
 {
     m_aruco_obstacles.clear();
     for (auto pose : newPoses.poses)
@@ -132,26 +132,26 @@ float LidarStrat::speed_inhibition(Distance distance, Angle angle, float distanc
 
 void LidarStrat::sendObstaclePose(PolarPosition pp, bool reverseGear)
 {
-    geometry_msgs::PoseStamped obstacle_pose_stamped;
+    geometry_msgs::msg::PoseStamped obstacle_pose_stamped;
     obstacle_pose_stamped.pose.position = Position(pp);
     obstacle_pose_stamped.header.frame_id
-      = tf::resolve(ros::this_node::getNamespace(), "base_link");
+      = tf::resolve(rclcpp::this_node::getNamespace(), "base_link");
     if (reverseGear)
     {
-        m_obstacle_behind_posestamped_pub.publish(obstacle_pose_stamped);
+        m_obstacle_behind_posestamped_pub->publish(obstacle_pose_stamped);
     }
     else
     {
-        m_obstacle_posestamped_pub.publish(obstacle_pose_stamped);
+        m_obstacle_posestamped_pub->publish(obstacle_pose_stamped);
     }
 }
 
-void LidarStrat::updateAruco(boost::shared_ptr<geometry_msgs::PoseStamped const> arucoPose, int id)
+void LidarStrat::updateAruco(boost::shared_ptr<geometry_msgs::msg::PoseStamped const> arucoPose, int id)
 {
     m_arucos[id] = *arucoPose;
 }
 
-LidarStrat::LidarStrat(ros::NodeHandle& nh)
+LidarStrat::LidarStrat(rclcpp::Node::SharedPtr node)
   : m_tf_listener(m_tf_buffer)
 {
     printf("[LIDAR] Begin main\n");
@@ -163,15 +163,33 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     float aruco_offset;
     float border_offset;
     float fixes_offset;
-    nh.param<bool>("isBlue", m_is_blue, true);
-    nh.param<float>("/strategy/lidar/max_distance", max_dist, 6.0f);
-    nh.param<float>("/strategy/lidar/min_distance", min_dist, 0.2f);
-    nh.param<float>("/strategy/lidar/min_intensity", m_min_intensity, 10.f);
-    nh.param<float>("/strategy/lidar/offset", lidar_offset, 0.20f);
-    nh.param<float>("/strategy/aruco/offset", aruco_offset, 0.20f);
-    nh.param<float>("/strategy/border/offset", border_offset, -0.35f);
-    nh.param<float>("/strategy/fixes/offset", fixes_offset, -0.08f);
-    nh.param<int>("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps, 360);
+    
+    node->declare_parameter("isBlue", true);
+    m_is_blue = node->get_parameter("isBlue")
+
+    node->declare_parameter("/strategy/lidar/max_distance", 6.0f);
+    max_dist = node->get_parameter("/strategy/lidar/max_distance")
+
+    node->declare_parameter("/strategy/lidar/min_distance", 0.2f);
+    min_dist = node->get_parameter("/strategy/lidar/min_distance")
+    
+    node->declare_parameter("/strategy/lidar/min_intensity", 10.f);
+    m_min_intensity = node->get_parameter("/strategy/lidar/min_intensity")
+    
+    node->declare_parameter("/strategy/lidar/offset", 0.20f);
+    lidar_offset = node->get_parameter("/strategy/lidar/offset")
+    
+    node->declare_parameter("/strategy/aruco/offset", 0.20f);
+    aruco_offset = node->get_parameter("/strategy/aruco/offset")
+    
+    node->declare_parameter("/strategy/border/offset", -0.35f);
+    border_offset = node->get_parameter("/strategy/border/offset")
+    
+    node->declare_parameter("/strategy/fixes/offset",  -0.08f);
+    fixes_offset = node->get_parameter("/strategy/fixes/offset")
+    
+    node->declare_parameter("/strategy/obstacle/nb_angular_steps", 360);
+    m_nb_angular_steps = node->get_parameter("/strategy/obstacle/nb_angular_steps")
 
     m_max_distance = Distance(max_dist);
     m_min_distance = Distance(min_dist);
@@ -181,10 +199,10 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     m_border_obs_offset = Distance(border_offset);
 
     m_arucos
-      = { geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
-          geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
-          geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(), geometry_msgs::PoseStamped(),
-          geometry_msgs::PoseStamped() }; // std::array<geometry_msgs::PoseStamped, 10>
+      = { geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(),
+          geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(),
+          geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped(),
+          geometry_msgs::msg::PoseStamped() }; // std::array<geometry_msgs::msg::PoseStamped, 10>
 
     for (int i = 0; i < m_nb_angular_steps; i++)
     {
@@ -196,40 +214,40 @@ LidarStrat::LidarStrat(ros::NodeHandle& nh)
     m_aruco_obstacles.clear();
 
     m_obstacle_posestamped_pub
-      = nh.advertise<geometry_msgs::PoseStamped>("obstacle_pose_stamped", 5);
+      = node->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_pose_stamped", 5);
     m_obstacle_behind_posestamped_pub
-      = nh.advertise<geometry_msgs::PoseStamped>("obstacle_behind_pose_stamped", 5);
-    m_obstacle_debug_pub = nh.advertise<visualization_msgs::MarkerArray>("obstacle_debug", 5);
-    m_dynamic_posestampedarray_pub = nh.advertise<geometry_msgs::PoseArray>("dynamic_obstacles", 5);
+      = node->create_publisher<geometry_msgs::msg::PoseStamped>("obstacle_behind_pose_stamped", 5);
+    m_obstacle_debug_pub = node->create_publisher<visualization_msgs::msg::MarkerArray>("obstacle_debug", 5);
+    m_dynamic_posestampedarray_pub = node->create_publisher<geometry_msgs::msg::PoseArray>("dynamic_obstacles", 5);
 
-    m_lidar_sub = nh.subscribe("scan_obstacles", 1000, &LidarStrat::updateLidarScan, this);
+    m_lidar_sub = node->create_subscription("scan_obstacles", 1000, &LidarStrat::updateLidarScan, this);
     m_aruco_obstacles_sub
-      = nh.subscribe("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
+      = node->create_subscription("aruco_obstacles", 5, &LidarStrat::updateArucoObstacles, this);
 
     if (m_is_blue)
     {
-        m_arucos_sub[6] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[6] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/6", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 6));
-        m_arucos_sub[7] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[7] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/7", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 7));
-        m_arucos_sub[8] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[8] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/8", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 8));
-        m_arucos_sub[9] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[9] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/9", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 9));
-        m_arucos_sub[10] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[10] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/10", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 10));
     }
     else
     {
-        m_arucos_sub[1] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[1] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/1", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 1));
-        m_arucos_sub[2] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[2] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/2", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 2));
-        m_arucos_sub[3] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[3] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/3", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 3));
-        m_arucos_sub[4] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[4] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/4", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 4));
-        m_arucos_sub[5] = nh.subscribe<geometry_msgs::PoseStamped>(
+        m_arucos_sub[5] = node->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/5", 5, boost::bind(&LidarStrat::updateAruco, this, _1, 5));
     }
 
@@ -346,27 +364,27 @@ bool LidarStrat::isInsideTable(const Position& input)
            && input.getY() > -0.95;
 }
 
-void debugObstacle(visualization_msgs::MarkerArray& ma, const std::vector<PolarPosition>& obstacles)
+void debugObstacle(visualization_msgs::msg::MarkerArray& ma, const std::vector<PolarPosition>& obstacles)
 {
     uint i = ma.markers.size();
     auto frame_id = tf::resolve(ros::this_node::getNamespace(), "base_link");
     if (i == 0)
     {
-        visualization_msgs::Marker m;
-        m.action = visualization_msgs::Marker::DELETEALL;
+        visualization_msgs::msg::Marker m;
+        m.action = visualization_msgs::msg::Marker::DELETEALL;
         ma.markers.push_back(m);
         m.id = i++;
     }
-    visualization_msgs::Marker m;
+    visualization_msgs::msg::Marker m;
     m.header.frame_id = frame_id;
     m.header.seq = 0;
     m.ns = "debug_obstacles";
     m.id = i++;
-    m.action = visualization_msgs::Marker::MODIFY;
+    m.action = visualization_msgs::msg::Marker::MODIFY;
     m.scale.x = 0.10;
     m.scale.y = 0.10;
     m.scale.z = 0.10;
-    m.type = visualization_msgs::Marker::SPHERE_LIST;
+    m.type = visualization_msgs::msg::Marker::SPHERE_LIST;
     m.color.r = 0;
     m.color.g = 1;
     m.color.b = 0;
@@ -380,25 +398,25 @@ void debugObstacle(visualization_msgs::MarkerArray& ma, const std::vector<PolarP
     ma.markers.push_back(m);
 }
 
-void debugSegments(visualization_msgs::MarkerArray& ma,
+void debugSegments(visualization_msgs::msg::MarkerArray& ma,
                    const std::vector<std::pair<Position, Position>>& segments)
 {
     uint i = ma.markers.size();
     if (i == 0)
     {
-        visualization_msgs::Marker m;
-        m.action = visualization_msgs::Marker::DELETEALL;
+        visualization_msgs::msg::Marker m;
+        m.action = visualization_msgs::msg::Marker::DELETEALL;
         ma.markers.push_back(m);
         m.id = i++;
     }
-    visualization_msgs::Marker m;
+    visualization_msgs::msg::Marker m;
     m.header.frame_id = "map";
     m.header.seq = 0;
     m.ns = "debug_obstacles";
     m.id = i++;
-    m.action = visualization_msgs::Marker::MODIFY;
+    m.action = visualization_msgs::msg::Marker::MODIFY;
     m.scale.x = 0.022;
-    m.type = visualization_msgs::Marker::LINE_LIST;
+    m.type = visualization_msgs::msg::Marker::LINE_LIST;
     m.color.r = 0;
     m.color.g = 1;
     m.color.b = 1;
@@ -415,7 +433,7 @@ void debugSegments(visualization_msgs::MarkerArray& ma,
 
 void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
 {
-    geometry_msgs::PoseArray dynamic_obstacles_poses = geometry_msgs::PoseArray();
+    geometry_msgs::msg::PoseArray dynamic_obstacles_poses = geometry_msgs::msg::PoseArray();
     dynamic_obstacles_poses.header.frame_id = "map";
 
     for (auto position : obstacles)
@@ -423,11 +441,11 @@ void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
         Position l_obstacle_position = Position(position); // cartesian, local to robot
 
         l_obstacle_position = l_obstacle_position.transform(m_baselink_to_map); // in map frame
-        geometry_msgs::Pose dynamic_obstacle_pose = Pose(l_obstacle_position, Angle(0));
+        geometry_msgs::msg::Pose dynamic_obstacle_pose = Pose(l_obstacle_position, Angle(0));
 
         dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
     }
-    m_dynamic_posestampedarray_pub.publish(dynamic_obstacles_poses);
+    m_dynamic_posestampedarray_pub->publish(dynamic_obstacles_poses);
 }
 
 void LidarStrat::run()
@@ -450,7 +468,7 @@ void LidarStrat::run()
         obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
         obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
 
-        visualization_msgs::MarkerArray debug_obstacles_msg;
+        visualization_msgs::msg::msg::MarkerArray debug_obstacles_msg;
 
         for (size_t i = 0; i < m_nb_angular_steps; i += 1)
         {
@@ -633,12 +651,12 @@ void LidarStrat::run()
             sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), true);
         }
 
-        if (m_obstacle_debug_pub.getNumSubscribers())
+        if (m_obstacle_debug_pub->getNumSubscribers())
         {
             debugObstacle(debug_obstacles_msg, obstacles);
             debugSegments(debug_obstacles_msg, border_segments);
             debugSegments(debug_obstacles_msg, fixes_segments);
-            m_obstacle_debug_pub.publish(debug_obstacles_msg);
+            m_obstacle_debug_pub->publish(debug_obstacles_msg);
         }
 
         ros::spinOnce();

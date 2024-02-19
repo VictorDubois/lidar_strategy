@@ -1,11 +1,11 @@
 #pragma once
 
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseArray.h>
-#include <geometry_msgs/PoseStamped.h>
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include <map>
-#include <ros/ros.h>
-#include <sensor_msgs/LaserScan.h>
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 #include <tf2_ros/transform_listener.h>
 #include <vector>
 
@@ -16,7 +16,7 @@ class LidarStrat
 {
 
 public:
-    LidarStrat(ros::NodeHandle& nh);
+    LidarStrat(rclcpp::Node::SharedPtr node);
     LidarStrat();
     void run();
     static float speed_inhibition(Distance distance, Angle angle, float distanceCoeff);
@@ -43,8 +43,8 @@ private:
     void sendDynamicObstacles(std::vector<PolarPosition> obstacles);
 
     void updateCurrentPose();
-    void updateArucoObstacles(const geometry_msgs::PoseArray& newPoses);
-    void updateAruco(const boost::shared_ptr<geometry_msgs::PoseStamped const> arucoPose, int id);
+    void updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPoses);
+    void updateAruco(const boost::shared_ptr<geometry_msgs::msg::PoseStamped const> arucoPose, int id);
     bool static isInsideTable(const Position& input);
     Angle idToAngle(unsigned int id);
     unsigned int angleToId(Angle a);
@@ -70,18 +70,20 @@ private:
     std::vector<Distance> m_lidar_sensors_dists; // in m
     std::vector<Angle> m_lidar_sensors_angles;   // in rad
     std::vector<PolarPosition> m_aruco_obstacles;
-    sensor_msgs::LaserScan m_obstacle_dbg; // used to display debug stuff
-    std::array<geometry_msgs::PoseStamped, 10> m_arucos;
+    sensor_msgs::msg::LaserScan m_obstacle_dbg; // used to display debug stuff
+    std::array<geometry_msgs::msg::PoseStamped, 10> m_arucos;
 
-    ros::Publisher m_obstacle_posestamped_pub;
-    ros::Publisher m_obstacle_behind_posestamped_pub;
-    ros::Publisher m_obstacle_debug_pub;
-    ros::Publisher m_dynamic_posestampedarray_pub;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr m_obstacle_posestamped_pub;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr m_obstacle_behind_posestamped_pub;
+    rclcpp::Publisher m_obstacle_debug_pub;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStampedArray>::SharedPtr m_dynamic_posestampedarray_pub;
 
-    ros::Subscriber m_lidar_sub;
-    ros::Subscriber m_current_pose_sub;
-    ros::Subscriber m_aruco_obstacles_sub;
+    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
+    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr current_pose_sub;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr aruco_obstacles_sub;
     std::map<int, ros::Subscriber> m_arucos_sub;
 
     ros::Time m_timeout_next_publish_dynamic_obst;
+
+    rclcpp::Node::SharedPtr node;
 };
