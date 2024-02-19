@@ -23,6 +23,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(krabi_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 include_directories(include)
 
@@ -37,7 +38,7 @@ add_executable(lidar_strategy_node
   #src/Krabi/src/angle.cpp
   #src/Krabi/src/distance.cpp
 )
-ament_target_dependencies(lidar_strategy_node rclcpp geometry_msgs std_msgs sensor_msgs goal_strategy tf2_ros krabi_msgs)
+ament_target_dependencies(lidar_strategy_node rclcpp geometry_msgs std_msgs sensor_msgs goal_strategy tf2_ros krabi_msgs visualization_msgs)
 
 
 
@@ -52,4 +53,5 @@ ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(goal_strategy)
 ament_export_dependencies(tf2_ros)
 ament_export_dependencies(krabi_msgs)
+ament_export_dependencies(visualization_msgs)
 ament_package()

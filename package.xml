@@ -21,6 +21,7 @@
   <build_depend>goal_strategy</build_depend>
   <build_depend>tf2_ros</build_depend>
   <build_depend>krabi_msgs</build_depend>
+  <build_depend>visualization_msgs</build_depend>
   
 
   <build_export_depend>rclcpp</build_export_depend>
@@ -31,6 +32,7 @@
   <build_export_depend>goal_strategy</build_export_depend>
   <build_export_depend>tf2_ros</build_export_depend>
   <build_export_depend>krabi_msgs</build_export_depend>
+  <build_export_depend>visualization_msgs</build_export_depend>
 
 
   <exec_depend>rosidl_default_runtime</exec_depend>
@@ -42,6 +44,7 @@
   <exec_depend>goal_strategy</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>krabi_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
 
 
   <member_of_group>rosidl_interface_packages</member_of_group>
