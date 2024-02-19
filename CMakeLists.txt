@@ -18,8 +18,6 @@ find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-
-
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 
@@ -40,3 +38,12 @@ ament_target_dependencies(lidar_strategy_node rclcpp geometry_msgs std_msgs sens
 
 
 
+install(TARGETS lidar_strategy_node
+  DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY include/
+  DESTINATION include)
+ament_export_include_directories(include)
+ament_export_dependencies(std_msgs)
+ament_export_dependencies(sensor_msgs)
+ament_export_dependencies(geometry_msgs)
+ament_package()
