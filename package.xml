@@ -20,8 +20,11 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>goal_strategy</build_depend>
   <build_depend>tf2_ros</build_depend>
+  <build_depend>tf2_eigen</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
   <build_depend>krabi_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
+  <build_depend>krabilib</build_depend>
   
 
   <build_export_depend>rclcpp</build_export_depend>
@@ -31,6 +34,8 @@
   <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>goal_strategy</build_export_depend>
   <build_export_depend>tf2_ros</build_export_depend>
+  <build_export_depend>tf2_eigen</build_export_depend>
+  <build_export_depend>tf2_geometry_msgs</build_export_depend>
   <build_export_depend>krabi_msgs</build_export_depend>
   <build_export_depend>visualization_msgs</build_export_depend>
 
@@ -43,8 +48,11 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>goal_strategy</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_eigen</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
   <exec_depend>krabi_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
 
 
   <member_of_group>rosidl_interface_packages</member_of_group>

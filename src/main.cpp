@@ -2,12 +2,12 @@
 
 int main(int argc, char* argv[])
 {
-    ros::init(argc, argv, "lidarStrat");
-    ros::NodeHandle n;
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<LidarStrat>();
 
-    LidarStrat my_lidar_strat(n);
-
-    my_lidar_strat.run();
-
+    rclcpp::executors::MultiThreadedExecutor executor;
+    executor.add_node(node);
+    executor.spin();
+    rclcpp::shutdown();
     return 0;
 }
