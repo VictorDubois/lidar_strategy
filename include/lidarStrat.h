@@ -87,9 +87,10 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr m_lidar_sub;
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr m_current_pose_sub;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr m_aruco_obstacles_sub;
-    std::map<int, rclcpp::Subscription<geometry_msgs::msg::PoseStamped>> m_arucos_sub;
+    std::map<int, rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr> m_arucos_sub;
 
     rclcpp::Time m_timeout_next_publish_dynamic_obst;
 
     rclcpp::Node::SharedPtr node;
+    rclcpp::TimerBase::SharedPtr timer_;
 };

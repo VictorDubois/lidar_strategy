@@ -233,6 +233,8 @@ LidarStrat::LidarStrat() : Node("lidar_strat")
     m_aruco_obstacles_sub
       = this->create_subscription<geometry_msgs::msg::PoseArray>("aruco_obstacles", 5, std::bind(&LidarStrat::updateArucoObstacles, this, std::placeholders::_1));
 
+/*
+
     if (m_is_blue)
     {
         m_arucos_sub[6] = this->create_subscription<geometry_msgs::msg::PoseStamped::SharedPtr>(
@@ -259,8 +261,48 @@ LidarStrat::LidarStrat() : Node("lidar_strat")
         m_arucos_sub[5] = this->create_subscription<geometry_msgs::msg::PoseStamped>(
           "/pose_robots/5", 5, std::bind(&LidarStrat::updateAruco, this, std::placeholders::_1, 5));
     }
+*/
+
+if (m_is_blue)
+    {
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_6_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 6);
+        m_arucos_sub[6] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r6", 5, l_arucos_6_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_7_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 7);
+        m_arucos_sub[7] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r7", 5, l_arucos_7_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_8_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 8);
+        m_arucos_sub[8] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r8", 5, l_arucos_8_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_9_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 9);
+        m_arucos_sub[9] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r9", 5, l_arucos_9_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_10_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 10);
+        m_arucos_sub[10] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r10", 5, l_arucos_10_func);//, l_sub_options);
+    }
+    else
+    {
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_1_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 1);
+        m_arucos_sub[1] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r1", 5, l_arucos_1_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_2_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 2);
+        m_arucos_sub[2] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r2", 5, l_arucos_2_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_3_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 3);
+        m_arucos_sub[3] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r3", 5, l_arucos_3_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_4_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 4);
+        m_arucos_sub[4] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r4", 5, l_arucos_4_func);//, l_sub_options);
+        std::function<void(std::shared_ptr<geometry_msgs::msg::PoseStamped>)> l_arucos_5_func = std::bind(
+            &LidarStrat::updateAruco, this, std::placeholders::_1, 5);
+        m_arucos_sub[5] = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_robots/r5", 5, l_arucos_5_func);//, l_sub_options);
+    }
 
     m_timeout_next_publish_dynamic_obst = this->now();
+    timer_ = this->create_wall_timer(std::chrono::milliseconds{66}, std::bind(&LidarStrat::run, this));
+
 }
 
 void LidarStrat::closest_point_of_segment(const Position& point,
@@ -387,7 +429,7 @@ void debugObstacle(visualization_msgs::msg::MarkerArray& ma, const std::vector<P
     }
     visualization_msgs::msg::Marker m;
     m.header.frame_id = frame_id;
-    m.header.seq = 0;
+    //m.header.seq = 0;
     m.ns = "debug_obstacles";
     m.id = i++;
     m.action = visualization_msgs::msg::Marker::MODIFY;
@@ -399,7 +441,7 @@ void debugObstacle(visualization_msgs::msg::MarkerArray& ma, const std::vector<P
     m.color.g = 1;
     m.color.b = 0;
     m.color.a = 1;
-    m.lifetime = ros::Duration(0); // Does not disapear
+    m.lifetime = rclcpp::Duration(0,0); // Does not disapear
     m.frame_locked = true;
     for (const auto& obs : obstacles)
     {
@@ -421,7 +463,7 @@ void debugSegments(visualization_msgs::msg::MarkerArray& ma,
     }
     visualization_msgs::msg::Marker m;
     m.header.frame_id = "map";
-    m.header.seq = 0;
+  //  m.header.seq = 0;
     m.ns = "debug_obstacles";
     m.id = i++;
     m.action = visualization_msgs::msg::Marker::MODIFY;
@@ -431,7 +473,7 @@ void debugSegments(visualization_msgs::msg::MarkerArray& ma,
     m.color.g = 1;
     m.color.b = 1;
     m.color.a = 1;
-    m.lifetime = ros::Duration(0); // Does not disapear
+    m.lifetime = rclcpp::Duration(0,0); // Does not disapear
     m.frame_locked = true;
     for (const auto& seg : segments)
     {
@@ -455,224 +497,216 @@ void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
 
         dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
     }
-    m_dynamic_posestampedarray_pub->publish(dynamic_obstacles_poses);
+    m_dynamic_pose_array_pub->publish(dynamic_obstacles_poses);
 }
 
 void LidarStrat::run()
 {
     float distanceCoeff = 1;
-    ros::Rate loop_rate(5);
     std::vector<Distance> sensors_dists;
 
     /*************************************************
      *                   Main loop                   *
      *************************************************/
-    while (ros::ok())
+  
+    updateCurrentPose();
+    std::vector<PolarPosition> obstacles;
+
+    // Obstacles very far away, in case there is no obstacle.
+    obstacles.push_back(PolarPosition(Distance(10000), Angle(0)));
+    obstacles.push_back(PolarPosition(Distance(10000), Angle(90)));
+    obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
+    obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
+
+    visualization_msgs::msg::MarkerArray debug_obstacles_msg;
+
+    for (size_t i = 0; i < m_nb_angular_steps; i += 1)
     {
-        updateCurrentPose();
-        std::vector<PolarPosition> obstacles;
-
-        // Obstacles very far away, in case there is no obstacle.
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(0)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(90)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
-        obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
-
-        visualization_msgs::msg::msg::MarkerArray debug_obstacles_msg;
-
-        for (size_t i = 0; i < m_nb_angular_steps; i += 1)
+        if (m_lidar_sensors_dists[i] < m_max_distance
+            && m_lidar_sensors_dists[i] > m_min_distance)
         {
-            if (m_lidar_sensors_dists[i] < m_max_distance
-                && m_lidar_sensors_dists[i] > m_min_distance)
+            // Compute position a first time, to see if the obstacle is inside the table
+            PolarPosition obs_polar_local(m_lidar_sensors_dists[i], m_lidar_sensors_angles[i]);
+            Position obs_local(obs_polar_local);
+            Position obs_global = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
+            Position obs_in_baselink = obs_global.transform(m_map_to_baselink);
+
+            bool allowed = isInsideTable(obs_global);
+            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Current Pose: " << m_current_pose);
+            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Obstacle local position: " << obs_in_baselink << std::endl);
+            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Obstacle global position: " << obs_global << ", Inside table = "
+                                                          << allowed << std::endl);
+
+            if (allowed)
             {
-                // Compute position a first time, to see if the obstacle is inside the table
-                PolarPosition obs_polar_local(m_lidar_sensors_dists[i], m_lidar_sensors_angles[i]);
-                Position obs_local(obs_polar_local);
-                Position obs_global = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
-                Position obs_in_baselink = obs_global.transform(m_map_to_baselink);
+                // Recompute with an offset (=margin if the robot is coming toward us)
+                PolarPosition obs_polar_local_with_offset(
+                  Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
+                  m_lidar_sensors_angles[i]);
 
-                bool allowed = isInsideTable(obs_global);
-                RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Current Pose: " << m_current_pose);
-                RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Obstacle local position: " << obs_in_baselink << std::endl);
-                RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Obstacle global position: " << obs_global << ", Inside table = "
-                                                              << allowed << std::endl);
+                
+                Position obs_local_with_offset(obs_polar_local);
+                Position obs_global_with_offset
+                  = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
 
-                if (allowed)
+                // Enlarge the other robots' perimeter, as a margin of safety
+                const Distance l_rayon_robot_adverse = Distance(0.2);
+                std::vector<Position> l_tour_robot_adverse;
+                for (float l_angle = 0; l_angle < 2*M_PI; l_angle += M_PI/4)
                 {
-                    // Recompute with an offset (=margin if the robot is coming toward us)
-                    PolarPosition obs_polar_local_with_offset(
-                      Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
-                      m_lidar_sensors_angles[i]);
+                    Position l_point_tour_robot_adverse = Position(obs_global);
+                    l_point_tour_robot_adverse.setX(Distance(l_point_tour_robot_adverse.getX() + l_rayon_robot_adverse * sin(l_angle)));
+                    l_point_tour_robot_adverse.setY(Distance(l_point_tour_robot_adverse.getY() + l_rayon_robot_adverse * cos(l_angle)));
+                    l_tour_robot_adverse.push_back(l_point_tour_robot_adverse);
 
-                    
-                    Position obs_local_with_offset(obs_polar_local);
-                    Position obs_global_with_offset
-                      = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
-
-                    // Enlarge the other robots' perimeter, as a margin of safety
-                    const Distance l_rayon_robot_adverse = Distance(0.2);
-                    std::vector<Position> l_tour_robot_adverse;
-                    for (float l_angle = 0; l_angle < 2*M_PI; l_angle += M_PI/4)
-                    {
-                        Position l_point_tour_robot_adverse = Position(obs_global);
-                        l_point_tour_robot_adverse.setX(Distance(l_point_tour_robot_adverse.getX() + l_rayon_robot_adverse * sin(l_angle)));
-                        l_point_tour_robot_adverse.setY(Distance(l_point_tour_robot_adverse.getY() + l_rayon_robot_adverse * cos(l_angle)));
-                        l_tour_robot_adverse.push_back(l_point_tour_robot_adverse);
-
-                        Position l_point_tour_robot_adverse_in_baselink = l_point_tour_robot_adverse.transform(m_map_to_baselink);
-                        obstacles.push_back(l_point_tour_robot_adverse_in_baselink);
-                    }
-                    
-                    Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
-                    obstacles.push_back(obs_in_baselink);
+                    Position l_point_tour_robot_adverse_in_baselink = l_point_tour_robot_adverse.transform(m_map_to_baselink);
+                    obstacles.push_back(l_point_tour_robot_adverse_in_baselink);
                 }
+                
+                Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
+                obstacles.push_back(obs_in_baselink);
             }
         }
-
-        for (const auto& aruco_pose : m_arucos)
-        {
-            // If the tag has been seen in the last two seconds
-            if (this->now() - aruco_pose.header.stamp > ros::Duration(2, 0))
-            {
-                continue;
-            }
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "aruco obstacle seen");
-            auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
-            auto shifted_position
-              = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
-                              position_local.getAngle());
-            Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
-        }
-
-        // end of dynamic obstacles => send them before adding static obstacles
-        if (this->now() > m_timeout_next_publish_dynamic_obst)
-        {
-            // only send them at 1hz, it is quite heavy
-            sendDynamicObstacles(obstacles);
-            m_timeout_next_publish_dynamic_obst = this->now() + ros::Duration(1.f);
-        }
-
-        std::vector<std::pair<Position, Position>> border_segments;
-        std::vector<std::pair<Position, Position>> fixes_segments;
-        // Edges
-        border_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
-        border_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
-        border_segments.push_back(std::make_pair(Position({ 1.5, 1 }), Position({ 1.5, -1 })));
-        border_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
-        // Rocky zone 2020
-        /*fixes_segments.push_back(std::make_pair(Position({ -0, -1. }), Position({ 0, -0.7 })));
-        fixes_segments.push_back(
-          std::make_pair(Position({ -0.6, -1 }), Position({ -0.6, -0.850 })));
-        fixes_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850
-        })));*/
-
-        // 2022
-
-        // Supports statuette
-        /*fixes_segments.push_back(
-          std::make_pair(Position({ -1.5, -0.49 }), Position({ -0.99, -1 })));
-        fixes_segments.push_back(std::make_pair(Position({ 1.5, -0.49 }), Position({ 0.99, -1
-        })));*/
-        /*
-        // porte-hexagone equipe
-        fixes_segments.push_back(
-          std::make_pair(Position({ 1.398, -0.325 }), Position({ 1.398, -0.175 })));
-        fixes_segments.push_back(
-          std::make_pair(Position({ -1.398, -0.325 }), Position({ -1.398, -0.175 })));
-
-        // porte-hexagone commun
-        fixes_segments.push_back(
-          std::make_pair(Position({ 1.5 - 1.425, 0.9 }), Position({ 1.5 - 1.275, 0.9 })));
-        fixes_segments.push_back(
-          std::make_pair(Position({ 1.425 - 1.5, 0.9 }), Position({ 1.275 - 1.5, 0.9 })));
-
-        // separateur central
-        fixes_segments.push_back(std::make_pair(Position({ 0, 1 }), Position({ 0, 0.7 })));
-        */
-
-        // 2023
-
-        // Cherries
-        fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
-        fixes_segments.push_back(std::make_pair(Position({ -1.5, 0 }), Position({ -1.35, 0 })));
-        fixes_segments.push_back(
-          std::make_pair(Position({ -0.15, -1 + 0.015 }), Position({ 0.15, -1 + 0.015 })));
-        fixes_segments.push_back(
-          std::make_pair(Position({ -0.15, 1 - 0.015 }), Position({ 0.15, 1 - 0.015 })));
-
-        // opponent start
-        if (m_is_blue)
-        {
-            fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, 1.0f - 0.45 }),
-                                                    Position({ 0.45f - 1.5f, 1.0f })));
-            fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, 1.0f - 0.45 }),
-                                                    Position({ -1.5f, 1.0f - 0.45 })));
-        }
-
-        for (auto segment : border_segments)
-        {
-            Position closestPointSegment;
-            closest_point_of_segment(
-              m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
-            auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
-            auto shifted_position = PolarPosition(
-              Distance(max(closestPointSegmentLocal.getNorme() - m_border_obs_offset, 0.)),
-              closestPointSegmentLocal.getAngle());
-            Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
-        }
-
-        for (auto segment : fixes_segments)
-        {
-            Position closestPointSegment;
-            closest_point_of_segment(
-              m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
-            auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
-            auto shifted_position = PolarPosition(
-              Distance(max(closestPointSegmentLocal.getNorme() - m_fixes_obs_offset, 0.)),
-              closestPointSegmentLocal.getAngle());
-            Position closest_point(shifted_position);
-            obstacles.push_back(closest_point);
-        }
-
-        size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
-        size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, false);
-
-        if (most_threateningId >= 0)
-        {
-            const auto& obstacle_front = obstacles[most_threateningId];
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Nearest obstacle front = " << obstacle_front << std::endl);
-            sendObstaclePose(obstacle_front, false);
-        }
-        else
-        {
-            sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), false);
-        }
-
-        if (most_threateningBehindId >= 0)
-        {
-            const auto& obstacle_behind = obstacles[most_threateningBehindId];
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Nearest obstacle behind = " << obstacle_behind << std::endl);
-            sendObstaclePose(obstacle_behind, true);
-        }
-        else
-        {
-            sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), true);
-        }
-
-        if (m_obstacle_debug_pub->getNumSubscribers())
-        {
-            debugObstacle(debug_obstacles_msg, obstacles);
-            debugSegments(debug_obstacles_msg, border_segments);
-            debugSegments(debug_obstacles_msg, fixes_segments);
-            m_obstacle_debug_pub->publish(debug_obstacles_msg);
-        }
-
-        ros::spinOnce();
-        loop_rate.sleep();
     }
 
-    // Print a message to let the user know the script exited cleanly
-    RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Obstacles Node exited cleanly");
+    for (const auto& aruco_pose : m_arucos)
+    {
+        // If the tag has been seen in the last two seconds
+        if (this->now() - aruco_pose.header.stamp > rclcpp::Duration(2, 0))
+        {
+            continue;
+        }
+        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "aruco obstacle seen");
+        auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
+        auto shifted_position
+          = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
+                          position_local.getAngle());
+        Position closest_point(shifted_position);
+        obstacles.push_back(closest_point);
+    }
+
+    // end of dynamic obstacles => send them before adding static obstacles
+    if (this->now() > m_timeout_next_publish_dynamic_obst)
+    {
+        // only send them at 1hz, it is quite heavy
+        sendDynamicObstacles(obstacles);
+        m_timeout_next_publish_dynamic_obst = this->now() + rclcpp::Duration(1,0);
+    }
+
+    std::vector<std::pair<Position, Position>> border_segments;
+    std::vector<std::pair<Position, Position>> fixes_segments;
+    // Edges
+    border_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
+    border_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
+    border_segments.push_back(std::make_pair(Position({ 1.5, 1 }), Position({ 1.5, -1 })));
+    border_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
+    // Rocky zone 2020
+    /*fixes_segments.push_back(std::make_pair(Position({ -0, -1. }), Position({ 0, -0.7 })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ -0.6, -1 }), Position({ -0.6, -0.850 })));
+    fixes_segments.push_back(std::make_pair(Position({ 0.6, -1 }), Position({ 0.6, -0.850
+    })));*/
+
+    // 2022
+
+    // Supports statuette
+    /*fixes_segments.push_back(
+      std::make_pair(Position({ -1.5, -0.49 }), Position({ -0.99, -1 })));
+    fixes_segments.push_back(std::make_pair(Position({ 1.5, -0.49 }), Position({ 0.99, -1
+    })));*/
+    /*
+    // porte-hexagone equipe
+    fixes_segments.push_back(
+      std::make_pair(Position({ 1.398, -0.325 }), Position({ 1.398, -0.175 })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ -1.398, -0.325 }), Position({ -1.398, -0.175 })));
+
+    // porte-hexagone commun
+    fixes_segments.push_back(
+      std::make_pair(Position({ 1.5 - 1.425, 0.9 }), Position({ 1.5 - 1.275, 0.9 })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ 1.425 - 1.5, 0.9 }), Position({ 1.275 - 1.5, 0.9 })));
+
+    // separateur central
+    fixes_segments.push_back(std::make_pair(Position({ 0, 1 }), Position({ 0, 0.7 })));
+    */
+
+    // 2023
+
+    // Cherries
+    fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
+    fixes_segments.push_back(std::make_pair(Position({ -1.5, 0 }), Position({ -1.35, 0 })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ -0.15, -1 + 0.015 }), Position({ 0.15, -1 + 0.015 })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ -0.15, 1 - 0.015 }), Position({ 0.15, 1 - 0.015 })));
+
+    // opponent start
+    if (m_is_blue)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, 1.0f - 0.45 }),
+                                                Position({ 0.45f - 1.5f, 1.0f })));
+        fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, 1.0f - 0.45 }),
+                                                Position({ -1.5f, 1.0f - 0.45 })));
+    }
+
+    for (auto segment : border_segments)
+    {
+        Position closestPointSegment;
+        closest_point_of_segment(
+          m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
+        auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
+        auto shifted_position = PolarPosition(
+          Distance(max(closestPointSegmentLocal.getNorme() - m_border_obs_offset, 0.)),
+          closestPointSegmentLocal.getAngle());
+        Position closest_point(shifted_position);
+        obstacles.push_back(closest_point);
+    }
+
+    for (auto segment : fixes_segments)
+    {
+        Position closestPointSegment;
+        closest_point_of_segment(
+          m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
+        auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
+        auto shifted_position = PolarPosition(
+          Distance(max(closestPointSegmentLocal.getNorme() - m_fixes_obs_offset, 0.)),
+          closestPointSegmentLocal.getAngle());
+        Position closest_point(shifted_position);
+        obstacles.push_back(closest_point);
+    }
+
+    size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
+    size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, false);
+
+    if (most_threateningId >= 0)
+    {
+        const auto& obstacle_front = obstacles[most_threateningId];
+        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Nearest obstacle front = " << obstacle_front << std::endl);
+        sendObstaclePose(obstacle_front, false);
+    }
+    else
+    {
+        sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), false);
+    }
+
+    if (most_threateningBehindId >= 0)
+    {
+        const auto& obstacle_behind = obstacles[most_threateningBehindId];
+        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Nearest obstacle behind = " << obstacle_behind << std::endl);
+        sendObstaclePose(obstacle_behind, true);
+    }
+    else
+    {
+        sendObstaclePose(PolarPosition(Distance(1000), Angle(0)), true);
+    }
+
+    if (m_obstacle_debug_pub->get_subscription_count())
+    {
+        debugObstacle(debug_obstacles_msg, obstacles);
+        debugSegments(debug_obstacles_msg, border_segments);
+        debugSegments(debug_obstacles_msg, fixes_segments);
+        m_obstacle_debug_pub->publish(debug_obstacles_msg);
+    }
+
 }
