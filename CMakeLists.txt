@@ -48,6 +48,9 @@ install(TARGETS lidar_strategy_node
   DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY include/
   DESTINATION include)
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
+
 ament_export_include_directories(include)
 ament_export_dependencies(std_msgs)
 ament_export_dependencies(sensor_msgs)
@@ -57,3 +60,4 @@ ament_export_dependencies(tf2_ros)
 ament_export_dependencies(krabi_msgs)
 ament_export_dependencies(visualization_msgs)
 ament_package()
+
