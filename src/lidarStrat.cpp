@@ -75,18 +75,7 @@ unsigned int get_idx_of_max(const float vector[], const size_t len)
     return curr_max;
 }
 
-float compute_dangerousness_from_angle(Angle a)
-{
-    if (a == 0.f)
-    {
-        return 1;
-    }
-    if (abs(a) > M_PI / 2)
-    {
-        return 0;
-    }
-    return sin(a) / a;
-}
+
 
 void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPoses)
 {
@@ -104,33 +93,6 @@ void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPo
 
         RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "arucoObstacle:" << m_aruco_obstacles.back() << std::endl);
     }
-}
-
-/**
- * @brief speed_inhibition the speed inhibition caused by an obstacle. For more information see the
- * geogebra file
- * @param distance the distance of the obstacle
- * @param angle the angle of the obstacle
- * @param distanceCoeff
- * @return the speed inhibition coefficient (1 = full speed, 0 = stop)
- */
-float LidarStrat::speed_inhibition(Distance distance, Angle angle, float distanceCoeff)
-{
-    float slope_max = 0.3f;  // m. max slope of the braking distance modulation
-    float slope_min = 0.1f;  // m. min slope of the braking distance modulation
-    float slope = slope_max; // m. slope of the braking distance modulation
-    float half_stop_min
-      = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
-    float half_stop_max
-      = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
-    float half_stop = half_stop_max; // m distance at which we limit to half the full speed
-    // We modulate the intensity of the inhibition based on the angle at which the obstacle is
-    // seen: in front it is more dangerous than on the sides
-    float angle_factor = compute_dangerousness_from_angle(angle);
-    half_stop = half_stop_min + (half_stop_max - half_stop_min) * angle_factor;
-    slope = slope_min + (slope_max - slope_min) * angle_factor;
-
-    return 0.5 * (1 + tanh((distance - half_stop) / slope));
 }
 
 void LidarStrat::sendObstaclePose(PolarPosition pp, bool reverseGear)
