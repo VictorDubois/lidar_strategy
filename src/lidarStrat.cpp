@@ -596,7 +596,7 @@ void LidarStrat::run()
     // 2023
 
     // Cherries
-    fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
+    /*fixes_segments.push_back(std::make_pair(Position({ 1.5, 0 }), Position({ 1.35, 0 })));
     fixes_segments.push_back(std::make_pair(Position({ -1.5, 0 }), Position({ -1.35, 0 })));
     fixes_segments.push_back(
       std::make_pair(Position({ -0.15, -1 + 0.015 }), Position({ 0.15, -1 + 0.015 })));
@@ -610,6 +610,28 @@ void LidarStrat::run()
                                                 Position({ 0.45f - 1.5f, 1.0f })));
         fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, 1.0f - 0.45 }),
                                                 Position({ -1.5f, 1.0f - 0.45 })));
+    }*/
+
+    // 2024
+
+    // PAMI
+     fixes_segments.push_back(std::make_pair(Position({  0.45f, -1.0f + 0.15 }),
+                                             Position({ -0.45f, -1.0f + 0.15 })));
+
+    // opponent start
+    if (m_is_blue)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, -1.0f + 0.45 }),
+                                                Position({ 0.45f - 1.5f, -1.0f })));
+        fixes_segments.push_back(std::make_pair(Position({ 0.45f - 1.5f, -1.0f + 0.45 }),
+                                                Position({ -1.5f, -1.0f + 0.45 })));
+    }
+    else
+    {
+        fixes_segments.push_back(std::make_pair(Position({ -0.45f + 1.5f, -1.0f + 0.45 }),
+                                                Position({ -0.45f + 1.5f, -1.0f })));
+        fixes_segments.push_back(std::make_pair(Position({ -0.45f + 1.5f, -1.0f + 0.45 }),
+                                                Position({ 1.5f, -1.0f + 0.45 })));
     }
 
     for (auto segment : border_segments)
