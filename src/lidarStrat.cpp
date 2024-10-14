@@ -615,7 +615,7 @@ void LidarStrat::run()
     // 2024
 
     // PAMI
-     fixes_segments.push_back(std::make_pair(Position({  0.45f, -1.0f + 0.15 }),
+    /* fixes_segments.push_back(std::make_pair(Position({  0.45f, -1.0f + 0.15 }),
                                              Position({ -0.45f, -1.0f + 0.15 })));
 
     // opponent start
@@ -632,8 +632,73 @@ void LidarStrat::run()
                                                 Position({ -0.45f + 1.5f, -1.0f })));
         fixes_segments.push_back(std::make_pair(Position({ -0.45f + 1.5f, -1.0f + 0.45 }),
                                                 Position({ 1.5f, -1.0f + 0.45 })));
+    }*/
+
+
+    // 2025
+
+    // Scène
+    fixes_segments.push_back(std::make_pair(Position({  0.45f,  -0.55f }),
+                                             Position({ -0.45f, -0.55f })));
+    fixes_segments.push_back(std::make_pair(Position({  0.45f,  -0.55f }),
+                                             Position({ 0.45f, -1.0f })));
+    fixes_segments.push_back(std::make_pair(Position({  -0.45f,  -1.0f }),
+                                             Position({ -0.45f, -0.55f })));
+
+    // Rampes
+    fixes_segments.push_back(std::make_pair(Position({  -0.45f,  -0.8f }),
+                                             Position({ -0.85f, -0.8f })));
+    fixes_segments.push_back(std::make_pair(Position({  -0.85f,  -1.0f }),
+                                             Position({ -0.85f, -0.8f })));
+    fixes_segments.push_back(std::make_pair(Position({  0.45f,  -0.8f }),
+                                             Position({ 0.85f, -0.8f })));
+    fixes_segments.push_back(std::make_pair(Position({  0.85f,  -1.0f }),
+                                             Position({ 0.85f, -0.8f })));
+
+    int coeffIsBlue = 1;
+    if (m_is_blue)// todo: check si c'est pas l'inverse
+    {
+        coeffIsBlue = -1;
     }
 
+    // Arrière-scène
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue* 0.45f,  -0.3f }),
+                                             Position({coeffIsBlue * 1.5f, -0.3f })));
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue* 0.45f,  -0.3f }),
+                                             Position({coeffIsBlue * 0.45f, -1.0f })));
+
+    // dépose côté (idéalement il faudrait ne l'activer que si on y détecte le robot adverse)
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 1.35f, -0.55f }),
+                                             Position({coeffIsBlue * 1.5f, -0.55f })));
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 1.35f, -0.55f }),
+                                             Position({coeffIsBlue * 1.35f, -0.1f })));
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 1.35f, -0.1f }),
+                                             Position({coeffIsBlue * 1.5f, -0.1f })));
+
+    // dépose vers public
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.05f, 0.85f }),
+                                             Position({-coeffIsBlue * 0.05f, 1.0f })));
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.05f, 0.85f }),
+                                             Position({-coeffIsBlue * 0.45f, 0.85f })));
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.45f, 0.85f }),
+                                             Position({-coeffIsBlue * 0.45f, 1.0f })));
+
+    // aire de départ coin
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 1.05f, 0.55f }),
+                                             Position({coeffIsBlue * 1.5f, 0.55f })));
+    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 1.05f, 0.55f }),
+                                             Position({coeffIsBlue * 1.05f, 1.0f })));
+
+    // aire de départ côté loin
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.0f }),
+                                             Position({-coeffIsBlue * 1.05f, 0.45f })));
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.0f }),
+                                             Position({-coeffIsBlue * 1.5f, 0.0f })));
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.5f, 0.45f }),
+                                             Position({-coeffIsBlue * 1.05f, 0.45f })));
+
+
+    
     for (auto segment : border_segments)
     {
         Position closestPointSegment;
