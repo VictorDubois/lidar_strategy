@@ -17,7 +17,7 @@ void LidarStrat::updateCurrentPose()
 
         // auto laser_id = tf::resolve(rclcpp::this_node::getNamespace(), "tim_top"); 1.7 Removal of
         // support for tf_prefix
-        auto laser_id = "tim_top";
+        auto laser_id = "ldlidar_top";
 
         const auto& transform
           = m_tf_buffer_->lookupTransform("map", base_link_id, rclcpp::Time(0)).transform;
