@@ -3,17 +3,14 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include <map>
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include <tf2_ros/transform_listener.h>
 #include "tf2_ros/buffer.h"
+#include <map>
+#include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-
 #include <vector>
-
-
 
 #include "krabilib/pose.h"
 #include "krabilib/position.h"
@@ -24,11 +21,11 @@ class LidarStrat : public rclcpp::Node
 public:
     LidarStrat();
     void run();
-    //static float speed_inhibition(Distance distance, Angle angle, float distanceCoeff);
+    // static float speed_inhibition(Distance distance, Angle angle, float distanceCoeff);
 
     /**
-     * @brief speed_inhibition the speed inhibition caused by an obstacle. For more information see the
-     * geogebra file
+     * @brief speed_inhibition the speed inhibition caused by an obstacle. For more information see
+     * the geogebra file
      * @param distance the distance of the obstacle
      * @param angle the angle of the obstacle
      * @param distanceCoeff
@@ -40,9 +37,9 @@ public:
         float slope_min = 0.1f;  // m. min slope of the braking distance modulation
         float slope = slope_max; // m. slope of the braking distance modulation
         float half_stop_min
-        = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
+          = 0.45f * distanceCoeff; // m. min distance at which we limit to half the full speed
         float half_stop_max
-        = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
+          = 0.55f * distanceCoeff;       // m. max distance at which we limit to half the full speed
         float half_stop = half_stop_max; // m distance at which we limit to half the full speed
         // We modulate the intensity of the inhibition based on the angle at which the obstacle is
         // seen: in front it is more dangerous than on the sides
@@ -69,7 +66,8 @@ private:
     void sendObstaclePose(PolarPosition pp, bool reverseGear);
     void updateLidarScan(const sensor_msgs::msg::LaserScan& new_scan);
 
-    
+    void updateRemainingTime(builtin_interfaces::msg::Duration a_remaining_time_match);
+
     void static closest_point_of_segment(const Position& point,
                                          const Position& segment1,
                                          const Position& segment2,
@@ -90,7 +88,8 @@ private:
 
     void updateCurrentPose();
     void updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPoses);
-    void updateAruco(const std::shared_ptr<geometry_msgs::msg::PoseStamped const> arucoPose, int id);
+    void updateAruco(const std::shared_ptr<geometry_msgs::msg::PoseStamped const> arucoPose,
+                     int id);
     bool static isInsideTable(const Position& input);
     Angle idToAngle(unsigned int id);
     unsigned int angleToId(Angle a);
@@ -105,14 +104,25 @@ private:
     Distance m_border_obs_offset;
     Distance m_fixes_obs_offset;
 
-    std::shared_ptr<tf2_ros::TransformListener> m_tf_listener_{nullptr};
+    std::shared_ptr<tf2_ros::TransformListener> m_tf_listener_{ nullptr };
     std::unique_ptr<tf2_ros::Buffer> m_tf_buffer_;
-    
+
     Transform3D m_laser_to_map;
     Transform3D m_laser_to_map_at_last_lidar_scan;
     Transform3D m_baselink_to_map;
     Transform3D m_map_to_baselink;
     Pose m_current_pose;
+
+    Position centre_petite_depose_coin;
+    Position centre_petite_depose_vers_public;
+    Position centre_aire_de_depart_vers_publique;
+    Position centre_aire_de_depart_cote_loin;
+
+    bool petite_depose_coin_activated = false;
+    bool petite_depose_vers_public_activated = false;
+    bool aire_de_depart_vers_publique_activated = false;
+    bool aire_de_depart_cote_loin_activated = false;
+    rclcpp::Duration m_remainig_time = rclcpp::Duration(1000, 0);
 
     std::vector<Distance> m_lidar_sensors_dists; // in m
     std::vector<Angle> m_lidar_sensors_angles;   // in rad
@@ -129,6 +139,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr m_current_pose_sub;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr m_aruco_obstacles_sub;
     std::map<int, rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr> m_arucos_sub;
+    rclcpp::Subscription<builtin_interfaces::msg::Duration>::SharedPtr m_remaining_time_sub;
 
     rclcpp::Time m_timeout_next_publish_dynamic_obst;
 

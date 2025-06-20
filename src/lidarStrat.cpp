@@ -207,6 +207,10 @@ LidarStrat::LidarStrat()
       "aruco_obstacles",
       5,
       std::bind(&LidarStrat::updateArucoObstacles, this, std::placeholders::_1));
+    m_remaining_time_sub = this->create_subscription<builtin_interfaces::msg::Duration>(
+      "remaining_time",
+      1000,
+      std::bind(&LidarStrat::updateRemainingTime, this, std::placeholders::_1));
 
     /*
 
@@ -507,6 +511,17 @@ void LidarStrat::run()
     obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
     obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
 
+    int coeffIsBlue = 1;
+    if (!m_is_blue) // todo: check si c'est pas l'inverse
+    {
+        coeffIsBlue = -1;
+    }
+
+    centre_petite_depose_coin = Position({ -coeffIsBlue * 1.25f, 0.92f });
+    centre_petite_depose_vers_public = Position({ coeffIsBlue * 0.75f, 0.92f });
+    centre_aire_de_depart_vers_publique = Position({ coeffIsBlue * 0.25f, 0.75f });
+    centre_aire_de_depart_cote_loin = Position({ -coeffIsBlue * 1.25f, 0.15f });
+
     visualization_msgs::msg::MarkerArray debug_obstacles_msg;
 
     for (size_t i = 0; i < m_nb_angular_steps; i += 1)
@@ -529,6 +544,29 @@ void LidarStrat::run()
 
             if (allowed)
             {
+                // Check if Obstacle is close from
+                if (!petite_depose_coin_activated
+                    && (obs_global - centre_petite_depose_coin).getNorme() < Distance(200))
+                {
+                    petite_depose_coin_activated = true;
+                }
+                if (!petite_depose_vers_public_activated
+                    && (obs_global - centre_petite_depose_vers_public).getNorme() < Distance(200))
+                {
+                    petite_depose_vers_public_activated = true;
+                }
+                if (!aire_de_depart_vers_publique_activated
+                    && (obs_global - centre_aire_de_depart_vers_publique).getNorme()
+                         < Distance(200))
+                {
+                    aire_de_depart_vers_publique_activated = true;
+                }
+                if (!aire_de_depart_cote_loin_activated
+                    && (obs_global - centre_aire_de_depart_cote_loin).getNorme() < Distance(200))
+                {
+                    aire_de_depart_cote_loin_activated = true;
+                }
+
                 // Recompute with an offset (=margin if the robot is coming toward us)
                 PolarPosition obs_polar_local_with_offset(
                   Distance(m_lidar_sensors_dists[i] - m_lidar_obs_offset),
@@ -684,12 +722,6 @@ void LidarStrat::run()
     fixes_segments.push_back(
       std::make_pair(Position({ 0.85f, -1.0f }), Position({ 0.85f, -0.8f })));
 
-    int coeffIsBlue = 1;
-    if (!m_is_blue) // todo: check si c'est pas l'inverse
-    {
-        coeffIsBlue = -1;
-    }
-
     // Arrière-scène
     fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.45f, -0.55f }),
                                             Position({ coeffIsBlue * 1.5f, -0.55f })));
@@ -699,34 +731,46 @@ void LidarStrat::run()
     //  (idéalement il faudrait ne l'activer que si on y détecte le robot adverse)
 
     // petite dépose coin
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
-                                            Position({ -coeffIsBlue * 1.5f, 0.85f })));
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
-                                            Position({ -coeffIsBlue * 1.05f, 1.0f })));
+    if (petite_depose_coin_activated)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
+                                                Position({ -coeffIsBlue * 1.5f, 0.85f })));
+        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
+                                                Position({ -coeffIsBlue * 1.05f, 0.15f })));
+    }
 
     // petite dépose vers public
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
-                                            Position({ coeffIsBlue * 0.5f, 1.0f })));
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
-                                            Position({ coeffIsBlue * 0.95f, 0.85f })));
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.95f, 0.85f }),
-                                            Position({ coeffIsBlue * 0.95f, 1.0f })));
+    if (petite_depose_vers_public_activated)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
+                                                Position({ coeffIsBlue * 0.5f, 1.0f })));
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
+                                                Position({ coeffIsBlue * 0.95f, 0.85f })));
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.95f, 0.85f }),
+                                                Position({ coeffIsBlue * 0.95f, 1.0f })));
+    }
 
     // aire de départ vers publique
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
-                                            Position({ coeffIsBlue * 0.05f, 1.0f })));
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
-                                            Position({ coeffIsBlue * 0.5f, 0.55f })));
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.55f }),
-                                            Position({ coeffIsBlue * 0.5f, 1.0f })));
+    if (aire_de_depart_vers_publique_activated)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
+                                                Position({ coeffIsBlue * 0.05f, 1.0f })));
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
+                                                Position({ coeffIsBlue * 0.5f, 0.55f })));
+        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.55f }),
+                                                Position({ coeffIsBlue * 0.5f, 1.0f })));
+    }
 
     // aire de départ côté loin
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
-                                            Position({ -coeffIsBlue * 1.5f, -0.1f })));
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
-                                            Position({ -coeffIsBlue * 1.05f, 0.35f })));
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
-                                            Position({ -coeffIsBlue * 1.5f, 0.35f })));
+    if (aire_de_depart_cote_loin_activated)
+    {
+        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
+                                                Position({ -coeffIsBlue * 1.5f, -0.1f })));
+        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
+                                                Position({ -coeffIsBlue * 1.05f, 0.35f })));
+        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
+                                                Position({ -coeffIsBlue * 1.5f, 0.35f })));
+    }
 
     for (auto segment : border_segments)
     {
@@ -787,5 +831,17 @@ void LidarStrat::run()
         debugSegments(debug_obstacles_msg, border_segments);
         debugSegments(debug_obstacles_msg, fixes_segments);
         m_obstacle_debug_pub->publish(debug_obstacles_msg);
+    }
+}
+
+void LidarStrat::updateRemainingTime(builtin_interfaces::msg::Duration a_remaining_time_match)
+{
+    m_remainig_time = rclcpp::Duration(a_remaining_time_match);
+    if (m_remainig_time.seconds() > 82)
+    {
+        petite_depose_coin_activated = false;
+        petite_depose_vers_public_activated = false;
+        aire_de_depart_vers_publique_activated = false;
+        aire_de_depart_cote_loin_activated = false;
     }
 }
