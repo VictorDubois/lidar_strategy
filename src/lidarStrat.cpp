@@ -183,7 +183,7 @@ LidarStrat::LidarStrat()
         geometry_msgs::msg::PoseStamped(), geometry_msgs::msg::PoseStamped()
     }; // std::array<geometry_msgs::msg::PoseStamped, 10>
 
-    for (int i = 0; i < m_nb_angular_steps; i++)
+    for (unsigned int i = 0; i < m_nb_angular_steps; i++)
     {
         m_lidar_sensors_dists.push_back(Distance(0));
         m_lidar_sensors_angles.push_back(idToAngle(i)); // conversion from loop index to degrees
@@ -798,8 +798,8 @@ void LidarStrat::run()
         obstacles.push_back(closest_point);
     }
 
-    size_t most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
-    size_t most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, false);
+    int most_threateningId = computeMostThreatening(obstacles, distanceCoeff, true);
+    int most_threateningBehindId = computeMostThreatening(obstacles, distanceCoeff, false);
 
     if (most_threateningId >= 0)
     {
