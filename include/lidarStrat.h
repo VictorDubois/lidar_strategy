@@ -3,7 +3,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/node.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "tf2_ros/buffer.h"
 #include <map>
@@ -93,6 +93,9 @@ private:
     bool static isInsideTable(const Position& input);
     Angle idToAngle(unsigned int id);
     unsigned int angleToId(Angle a);
+
+    void create_subscribers();
+    void create_publishers();
 
     bool m_is_blue;
     Distance m_min_distance;

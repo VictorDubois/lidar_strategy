@@ -33,6 +33,8 @@ include_directories(include)
 add_executable(lidar_strategy_node 
   src/main.cpp
   src/lidarStrat.cpp
+  src/create_publishers.cpp
+  src/create_subscribers.cpp
   #src/Krabi/src/position.cpp
   #src/Krabi/src/positionPlusAngle.cpp
   #src/Krabi/src/vec2d.cpp
