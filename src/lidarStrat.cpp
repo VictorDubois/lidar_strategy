@@ -141,7 +141,7 @@ LidarStrat::LidarStrat()
     float lidar_offset;
     float aruco_offset;
     float border_offset;
-    float fixes_offset;
+    float static_offset;
 
     this->declare_parameter("isBlue", true);
     this->get_parameter("isBlue", m_is_blue);
@@ -164,8 +164,8 @@ LidarStrat::LidarStrat()
     this->declare_parameter("/strategy/border/offset", -0.35f);
     this->get_parameter("/strategy/border/offset", border_offset);
 
-    this->declare_parameter("/strategy/fixes/offset", -0.08f);
-    this->get_parameter("/strategy/fixes/offset", fixes_offset);
+    this->declare_parameter("/strategy/static/offset", -0.08f);
+    this->get_parameter("/strategy/static/offset", static_offset);
 
     this->declare_parameter("/strategy/obstacle/nb_angular_steps", 360);
     this->get_parameter("/strategy/obstacle/nb_angular_steps", m_nb_angular_steps);
@@ -174,7 +174,7 @@ LidarStrat::LidarStrat()
     m_min_distance = Distance(min_dist);
     m_aruco_obs_offset = Distance(aruco_offset);
     m_lidar_obs_offset = Distance(lidar_offset);
-    m_fixes_obs_offset = Distance(fixes_offset);
+    m_static_obs_offset = Distance(static_offset);
     m_border_obs_offset = Distance(border_offset);
 
     m_arucos = {
@@ -534,7 +534,7 @@ void LidarStrat::run()
     }
 
     std::vector<std::pair<Position, Position>> border_segments;
-    std::vector<std::pair<Position, Position>> fixes_segments;
+    std::vector<std::pair<Position, Position>> static_segments;
     // Edges
     border_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
     border_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
@@ -544,84 +544,85 @@ void LidarStrat::run()
     // 2025
 #ifdef YEAR_2025
     // Scène
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ 0.45f, -0.55f }), Position({ -0.45f, -0.55f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ 0.45f, -0.55f }), Position({ 0.45f, -1.0f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ -0.45f, -1.0f }), Position({ -0.45f, -0.55f })));
 
     // Rampes
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ -0.45f, -0.8f }), Position({ -0.85f, -0.8f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ -0.85f, -1.0f }), Position({ -0.85f, -0.8f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ 0.45f, -0.8f }), Position({ 0.85f, -0.8f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ 0.85f, -1.0f }), Position({ 0.85f, -0.8f })));
 
     // Arrière-scène
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.45f, -0.55f }),
-                                            Position({ coeffIsBlue * 1.5f, -0.55f })));
-    fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.45f, -0.55f }),
-                                            Position({ coeffIsBlue * 0.45f, -1.0f })));
+    static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.45f, -0.55f }),
+                                             Position({ coeffIsBlue * 1.5f, -0.55f })));
+    static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.45f, -0.55f }),
+                                             Position({ coeffIsBlue * 0.45f, -1.0f })));
 
     //  (idéalement il faudrait ne l'activer que si on y détecte le robot adverse)
 
     // petite dépose coin
     if (petite_depose_coin_activated)
     {
-        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
-                                                Position({ -coeffIsBlue * 1.5f, 0.85f })));
-        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
-                                                Position({ -coeffIsBlue * 1.05f, 0.15f })));
+        static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
+                                                 Position({ -coeffIsBlue * 1.5f, 0.85f })));
+        static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.85f }),
+                                                 Position({ -coeffIsBlue * 1.05f, 0.15f })));
     }
 
     // petite dépose vers public
     if (petite_depose_vers_public_activated)
     {
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
-                                                Position({ coeffIsBlue * 0.5f, 1.0f })));
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
-                                                Position({ coeffIsBlue * 0.95f, 0.85f })));
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.95f, 0.85f }),
-                                                Position({ coeffIsBlue * 0.95f, 1.0f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
+                                                 Position({ coeffIsBlue * 0.5f, 1.0f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.85f }),
+                                                 Position({ coeffIsBlue * 0.95f, 0.85f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.95f, 0.85f }),
+                                                 Position({ coeffIsBlue * 0.95f, 1.0f })));
     }
 
     // aire de départ vers publique
     if (aire_de_depart_vers_publique_activated)
     {
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
-                                                Position({ coeffIsBlue * 0.05f, 1.0f })));
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
-                                                Position({ coeffIsBlue * 0.5f, 0.55f })));
-        fixes_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.55f }),
-                                                Position({ coeffIsBlue * 0.5f, 1.0f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
+                                                 Position({ coeffIsBlue * 0.05f, 1.0f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.05f, 0.55f }),
+                                                 Position({ coeffIsBlue * 0.5f, 0.55f })));
+        static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.5f, 0.55f }),
+                                                 Position({ coeffIsBlue * 0.5f, 1.0f })));
     }
 
     // aire de départ côté loin
     if (aire_de_depart_cote_loin_activated)
     {
-        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
-                                                Position({ -coeffIsBlue * 1.5f, -0.1f })));
-        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
-                                                Position({ -coeffIsBlue * 1.05f, 0.35f })));
-        fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
-                                                Position({ -coeffIsBlue * 1.5f, 0.35f })));
+        static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
+                                                 Position({ -coeffIsBlue * 1.5f, -0.1f })));
+        static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, -0.1f }),
+                                                 Position({ -coeffIsBlue * 1.05f, 0.35f })));
+        static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
+                                                 Position({ -coeffIsBlue * 1.5f, 0.35f })));
     }
 #elifdef YEAR_2026
 
     // Grenier
-    fixes_segments.push_back(
+    static_segments.push_back(
       std::make_pair(Position({ 0.9, -0.55f }), Position({ -0.9f, -0.55f })));
-    fixes_segments.push_back(std::make_pair(Position({ 0.9f, -0.55f }), Position({ 0.9f, -1.0f })));
-    fixes_segments.push_back(
+    static_segments.push_back(
+      std::make_pair(Position({ 0.9f, -0.55f }), Position({ 0.9f, -1.0f })));
+    static_segments.push_back(
       std::make_pair(Position({ -0.9f, -1.0f }), Position({ -0.9f, -0.55f })));
 
     // Nid adverse
-    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.9f, -0.55f }),
-                                            Position({ -coeffIsBlue * 1.5f, -0.55f })));
+    static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.9f, -0.55f }),
+                                             Position({ -coeffIsBlue * 1.5f, -0.55f })));
 
 #endif
 
@@ -638,14 +639,14 @@ void LidarStrat::run()
         obstacles.push_back(closest_point);
     }
 
-    for (auto segment : fixes_segments)
+    for (auto segment : static_segments)
     {
         Position closestPointSegment;
         closest_point_of_segment(
           m_current_pose.getPosition(), segment.first, segment.second, closestPointSegment);
         auto closestPointSegmentLocal = closestPointSegment.transform(m_map_to_baselink);
         auto shifted_position = PolarPosition(
-          Distance(max(closestPointSegmentLocal.getNorme() - m_fixes_obs_offset, 0.)),
+          Distance(max(closestPointSegmentLocal.getNorme() - m_static_obs_offset, 0.)),
           closestPointSegmentLocal.getAngle());
         Position closest_point(shifted_position);
         obstacles.push_back(closest_point);
@@ -682,7 +683,7 @@ void LidarStrat::run()
     {
         debugObstacle(debug_obstacles_msg, obstacles);
         debugSegments(debug_obstacles_msg, border_segments);
-        debugSegments(debug_obstacles_msg, fixes_segments);
+        debugSegments(debug_obstacles_msg, static_segments);
         m_obstacle_debug_pub->publish(debug_obstacles_msg);
     }
 }

@@ -105,7 +105,7 @@ private:
     Distance m_lidar_obs_offset;
     Distance m_aruco_obs_offset;
     Distance m_border_obs_offset;
-    Distance m_fixes_obs_offset;
+    Distance m_static_obs_offset;
 
     std::shared_ptr<tf2_ros::TransformListener> m_tf_listener_{ nullptr };
     std::unique_ptr<tf2_ros::Buffer> m_tf_buffer_;
