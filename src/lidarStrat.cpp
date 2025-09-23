@@ -7,6 +7,8 @@
 
 using namespace std;
 
+#define YEAR_2026
+
 void LidarStrat::updateCurrentPose()
 {
     try
@@ -422,11 +424,12 @@ void LidarStrat::run()
         coeffIsBlue = -1;
     }
 
+#ifdef YEAR_2025
     centre_petite_depose_coin = Position({ -coeffIsBlue * 1.25f, 0.92f });
     centre_petite_depose_vers_public = Position({ coeffIsBlue * 0.75f, 0.92f });
     centre_aire_de_depart_vers_publique = Position({ coeffIsBlue * 0.25f, 0.75f });
     centre_aire_de_depart_cote_loin = Position({ -coeffIsBlue * 1.25f, 0.15f });
-
+#endif
     visualization_msgs::msg::MarkerArray debug_obstacles_msg;
 
     for (size_t i = 0; i < m_nb_angular_steps; i += 1)
@@ -449,6 +452,7 @@ void LidarStrat::run()
 
             if (allowed)
             {
+#ifdef YEAR_2025
                 // Check if Obstacle is close from
                 if (!petite_depose_coin_activated
                     && (obs_global - centre_petite_depose_coin).getNorme() < Distance(200))
@@ -471,6 +475,7 @@ void LidarStrat::run()
                 {
                     aire_de_depart_cote_loin_activated = true;
                 }
+#endif
 
                 // Recompute with an offset (=margin if the robot is coming toward us)
                 PolarPosition obs_polar_local_with_offset(
@@ -537,7 +542,7 @@ void LidarStrat::run()
     border_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
 
     // 2025
-
+#ifdef YEAR_2025
     // Scène
     fixes_segments.push_back(
       std::make_pair(Position({ 0.45f, -0.55f }), Position({ -0.45f, -0.55f })));
@@ -605,6 +610,20 @@ void LidarStrat::run()
         fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
                                                 Position({ -coeffIsBlue * 1.5f, 0.35f })));
     }
+#elifdef YEAR_2026
+
+    // Grenier
+    fixes_segments.push_back(
+      std::make_pair(Position({ 0.9, -0.55f }), Position({ -0.9f, -0.55f })));
+    fixes_segments.push_back(std::make_pair(Position({ 0.9f, -0.55f }), Position({ 0.9f, -1.0f })));
+    fixes_segments.push_back(
+      std::make_pair(Position({ -0.9f, -1.0f }), Position({ -0.9f, -0.55f })));
+
+    // Nid adverse
+    fixes_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.9f, -0.55f }),
+                                            Position({ -coeffIsBlue * 1.5f, -0.55f })));
+
+#endif
 
     for (auto segment : border_segments)
     {
