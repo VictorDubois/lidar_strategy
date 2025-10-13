@@ -621,8 +621,8 @@ void LidarStrat::run()
       std::make_pair(Position({ -0.9f, -1.0f }), Position({ -0.9f, -0.55f })));
 
     // Nid adverse
-    static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 0.9f, -0.55f }),
-                                             Position({ -coeffIsBlue * 1.5f, -0.55f })));
+    static_segments.push_back(std::make_pair(Position({ coeffIsBlue * 0.9f, -0.55f }),
+                                             Position({ coeffIsBlue * 1.5f, -0.55f })));
 
 #endif
 
