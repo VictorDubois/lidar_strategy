@@ -610,8 +610,7 @@ void LidarStrat::run()
         static_segments.push_back(std::make_pair(Position({ -coeffIsBlue * 1.05f, 0.35f }),
                                                  Position({ -coeffIsBlue * 1.5f, 0.35f })));
     }
-#elifdef YEAR_2026
-
+#elif defined(YEAR_2026)
     // Grenier
     static_segments.push_back(
       std::make_pair(Position({ 0.9, -0.55f }), Position({ -0.9f, -0.55f })));
