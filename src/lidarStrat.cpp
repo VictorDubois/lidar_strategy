@@ -53,6 +53,7 @@ void LidarStrat::updateLidarScan(const sensor_msgs::msg::LaserScan& new_scan)
     updateCurrentPose();
     m_obstacle_dbg = new_scan;
     std::fill(m_lidar_sensors_dists.begin(), m_lidar_sensors_dists.end(), m_max_distance);
+    m_lidar_sensors_stamp = new_scan.header.stamp;
 
     unsigned int i = 0;
     for (float angle = new_scan.angle_min; angle < new_scan.angle_max;
@@ -109,6 +110,8 @@ void LidarStrat::sendObstaclePose(PolarPosition pp, bool reverseGear)
     // "base_link");  1.7 Removal of support for tf_prefix
     obstacle_pose_stamped.header.frame_id = "base_link";
 
+    obstacle_pose_stamped.header.stamp = m_lidar_sensors_stamp;
+
     if (reverseGear)
     {
         m_obstacle_behind_posestamped_pub->publish(obstacle_pose_stamped);
@@ -154,6 +157,12 @@ LidarStrat::LidarStrat()
 
     this->declare_parameter("/strategy/lidar/min_intensity", 10.f);
     this->get_parameter("/strategy/lidar/min_intensity", m_min_intensity);
+
+    bool is_sim = this->get_parameter("use_sim_time").as_bool();
+    if (is_sim)
+    {
+        m_min_intensity = 0; // Gazebo cannot produce intensities
+    }
 
     this->declare_parameter("/strategy/lidar/offset", 0.20f);
     this->get_parameter("/strategy/lidar/offset", lidar_offset);
@@ -313,8 +322,8 @@ bool LidarStrat::isInsideTable(const Position& input)
            && input.getY() > -0.95;
 }
 
-void debugObstacle(visualization_msgs::msg::MarkerArray& ma,
-                   const std::vector<PolarPosition>& obstacles)
+void LidarStrat::debugObstacle(visualization_msgs::msg::MarkerArray& ma,
+                               const std::vector<PolarPosition>& obstacles)
 {
     uint i = ma.markers.size();
     // auto frame_id = tf::resolve(ros::this_node::getNamespace(), "base_link"); 1.7 Removal of
@@ -329,6 +338,7 @@ void debugObstacle(visualization_msgs::msg::MarkerArray& ma,
     }
     visualization_msgs::msg::Marker m;
     m.header.frame_id = frame_id;
+    m.header.stamp = this->now();
     // m.header.seq = 0;
     m.ns = "debug_obstacles";
     m.id = i++;
@@ -385,6 +395,11 @@ void debugSegments(visualization_msgs::msg::MarkerArray& ma,
 
 void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
 {
+    if (m_dynamic_pose_array_pub->get_subscription_count() == 0)
+    {
+        // Do not waste time if no one subscribes
+        return;
+    }
     geometry_msgs::msg::PoseArray dynamic_obstacles_poses = geometry_msgs::msg::PoseArray();
     dynamic_obstacles_poses.header.frame_id = "map";
 
@@ -397,6 +412,8 @@ void LidarStrat::sendDynamicObstacles(std::vector<PolarPosition> obstacles)
 
         dynamic_obstacles_poses.poses.push_back(dynamic_obstacle_pose);
     }
+    dynamic_obstacles_poses.header.stamp = m_lidar_sensors_stamp;
+
     m_dynamic_pose_array_pub->publish(dynamic_obstacles_poses);
 }
 

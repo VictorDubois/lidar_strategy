@@ -97,6 +97,9 @@ private:
     void create_subscribers();
     void create_publishers();
 
+    void debugObstacle(visualization_msgs::msg::MarkerArray& ma,
+                       const std::vector<PolarPosition>& obstacles);
+
     bool m_is_blue;
     Distance m_min_distance;
     Distance m_max_distance;
@@ -148,4 +151,6 @@ private:
 
     rclcpp::Node::SharedPtr node;
     rclcpp::TimerBase::SharedPtr timer_;
+
+    builtin_interfaces::msg::Time m_lidar_sensors_stamp;
 };
