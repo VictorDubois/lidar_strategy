@@ -32,11 +32,10 @@ void LidarStrat::updateCurrentPose()
     }
     catch (tf2::TransformException& ex)
     {
-        RCLCPP_WARN_STREAM(rclcpp::get_logger("rclcpp"), ex.what());
+        RCLCPP_WARN_STREAM(this->get_logger(), ex.what());
     }
 
-    RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
-                        "updateCurrentPose: " << m_current_pose << std::endl);
+    RCLCPP_DEBUG_STREAM(this->get_logger(), "updateCurrentPose: " << m_current_pose << std::endl);
 }
 Angle LidarStrat::idToAngle(unsigned int id)
 {
@@ -97,7 +96,7 @@ void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPo
 
         m_aruco_obstacles.emplace_back(distance, other_robot.getAngle());
 
-        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
+        RCLCPP_DEBUG_STREAM(this->get_logger(),
                             "arucoObstacle:" << m_aruco_obstacles.back() << std::endl);
     }
 }
@@ -460,10 +459,10 @@ void LidarStrat::run()
             Position obs_in_baselink = obs_global.transform(m_map_to_baselink);
 
             bool allowed = isInsideTable(obs_global);
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "Current Pose: " << m_current_pose);
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
+            RCLCPP_DEBUG_STREAM(this->get_logger(), "Current Pose: " << m_current_pose);
+            RCLCPP_DEBUG_STREAM(this->get_logger(),
                                 "Obstacle local position: " << obs_in_baselink << std::endl);
-            RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
+            RCLCPP_DEBUG_STREAM(this->get_logger(),
                                 "Obstacle global position: " << obs_global << ", Inside table = "
                                                              << allowed << std::endl);
 
@@ -533,7 +532,7 @@ void LidarStrat::run()
         {
             continue;
         }
-        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"), "aruco obstacle seen");
+        RCLCPP_DEBUG_STREAM(this->get_logger(), "aruco obstacle seen");
         auto position_local = Pose(aruco_pose.pose).getPosition().transform(m_map_to_baselink);
         auto shifted_position
           = PolarPosition(Distance(max(position_local.getNorme() - m_aruco_obs_offset, 0.)),
@@ -674,7 +673,7 @@ void LidarStrat::run()
     if (most_threateningId >= 0)
     {
         const auto& obstacle_front = obstacles[most_threateningId];
-        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
+        RCLCPP_DEBUG_STREAM(this->get_logger(),
                             "Nearest obstacle front = " << obstacle_front << std::endl);
         sendObstaclePose(obstacle_front, false);
     }
@@ -686,7 +685,7 @@ void LidarStrat::run()
     if (most_threateningBehindId >= 0)
     {
         const auto& obstacle_behind = obstacles[most_threateningBehindId];
-        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("rclcpp"),
+        RCLCPP_DEBUG_STREAM(this->get_logger(),
                             "Nearest obstacle behind = " << obstacle_behind << std::endl);
         sendObstaclePose(obstacle_behind, true);
     }
