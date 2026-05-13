@@ -17,7 +17,9 @@ def generate_launch_description():
             namespace='krabi_ns',
             executable='lidar_strategy_node',
             name='lidar_strat',
-            parameters=[{"use_sim_time": use_sim_time_value}]
+            parameters=[{"use_sim_time": use_sim_time_value}],
+            respawn=True,
+            respawn_delay=5.0
             #,prefix=['gdbserver localhost:3000']
         )
     ])
