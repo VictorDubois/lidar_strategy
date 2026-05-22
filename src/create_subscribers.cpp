@@ -13,6 +13,9 @@ void LidarStrat::create_subscribers()
       1000,
       std::bind(&LidarStrat::updateRemainingTime, this, std::placeholders::_1));
 
+    // Individual ArUco tag subscribers — used with the overhead camera from 2020/2022.
+    // Tags 1-5 belong to the blue team's opponents (yellow); tags 6-10 to yellow's opponents (blue).
+    // Disabled by default; compile with -DUSE_ARUCO to re-enable.
 #ifdef USE_ARUCO
 
     if (m_is_blue)

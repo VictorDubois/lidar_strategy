@@ -15,6 +15,17 @@
 #include "krabilib/pose.h"
 #include "krabilib/position.h"
 
+/**
+ * ROS2 node that processes LiDAR data to detect and track obstacles.
+ *
+ * Each iteration (run()), it merges three obstacle sources:
+ *   1. Dynamic obstacles from the LiDAR scan (points inside the table, expanded to robot size)
+ *   2. ArUco-based obstacles from the overhead camera (legacy / optional)
+ *   3. Static obstacles: table border segments + year-specific game structures
+ *
+ * From that merged list it selects the single most threatening obstacle in front
+ * and behind, and publishes them for main_strategy to act on.
+ */
 class LidarStrat : public rclcpp::Node
 {
 
@@ -51,6 +62,8 @@ public:
     };
 
 private:
+    // Returns a [0,1] weight for how dangerous an obstacle is based on its angle.
+    // Uses sinc (sin(a)/a): 1 dead ahead, smoothly falling to 0 at ±90°, 0 beyond that.
     static float compute_dangerousness_from_angle(Angle a)
     {
         if (a == 0.f)
@@ -100,36 +113,53 @@ private:
     void debugObstacle(visualization_msgs::msg::MarkerArray& ma,
                        const std::vector<PolarPosition>& obstacles);
 
-    bool m_is_blue;
-    Distance m_min_distance;
-    Distance m_max_distance;
-    float m_min_intensity;
-    unsigned int m_nb_angular_steps;
-    Distance m_lidar_obs_offset;
-    Distance m_aruco_obs_offset;
-    Distance m_border_obs_offset;
-    Distance m_static_obs_offset;
+    bool m_is_blue; // team colour; affects left/right mirroring of game-specific positions
+    Distance
+      m_min_distance; // ignore LiDAR returns closer than this (avoids seeing the robot itself)
+    Distance m_max_distance; // ignore LiDAR returns farther than this
+    float m_min_intensity;   // ignore weak LiDAR returns (set to 0 in simulation, Gazebo has no
+                             // intensity)
+    unsigned int
+      m_nb_angular_steps; // number of angular bins for the LiDAR discretisation (default 360)
+    Distance m_lidar_obs_offset;  // safety margin subtracted from LiDAR obstacle distances
+    Distance m_aruco_obs_offset;  // safety margin subtracted from ArUco obstacle distances
+    Distance m_border_obs_offset; // margin for table border
+    Distance m_static_obs_offset; // margin for static game structures
 
     std::shared_ptr<tf2_ros::TransformListener> m_tf_listener_{ nullptr };
     std::unique_ptr<tf2_ros::Buffer> m_tf_buffer_;
 
     Transform3D m_laser_to_map;
+    // Stored separately because the robot can move between the LiDAR scan and the run() call;
+    // we use the transform that was current when the scan was captured to place obstacles
+    // correctly.
     Transform3D m_laser_to_map_at_last_lidar_scan;
     Transform3D m_baselink_to_map;
     Transform3D m_map_to_baselink;
     Pose m_current_pose;
 
+#ifdef YEAR_2025
+    // Centers of game-specific zones (YEAR_2025). Used to detect when the opponent is inside
+    // one of these zones and dynamically add the corresponding static obstacle segments.
     Position centre_petite_depose_coin;
     Position centre_petite_depose_vers_public;
     Position centre_aire_de_depart_vers_publique;
     Position centre_aire_de_depart_cote_loin;
 
+    // These flags start false and become true the first time a LiDAR point is seen near the
+    // corresponding zone, causing its boundary segments to be added as static obstacles.
+    // They reset to false when the remaining match time drops back below 82 s (to allow dropping
+    // there as a last resort).
     bool petite_depose_coin_activated = false;
     bool petite_depose_vers_public_activated = false;
     bool aire_de_depart_vers_publique_activated = false;
     bool aire_de_depart_cote_loin_activated = false;
+#endif
+
     rclcpp::Duration m_remainig_time = rclcpp::Duration(1000, 0);
 
+    // Both arrays are indexed by angular bin id (0 … m_nb_angular_steps-1).
+    // m_lidar_sensors_dists is reset to m_max_distance each scan and filled with valid returns.
     std::vector<Distance> m_lidar_sensors_dists; // in m
     std::vector<Angle> m_lidar_sensors_angles;   // in rad
     std::vector<PolarPosition> m_aruco_obstacles;

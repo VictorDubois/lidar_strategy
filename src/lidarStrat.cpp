@@ -37,10 +37,12 @@ void LidarStrat::updateCurrentPose()
 
     RCLCPP_DEBUG_STREAM(this->get_logger(), "updateCurrentPose: " << m_current_pose << std::endl);
 }
+// Maps a bin index → angle in [-π, π]. Inverse of angleToId.
 Angle LidarStrat::idToAngle(unsigned int id)
 {
     return Angle((double)id * 2 * M_PI / m_nb_angular_steps - M_PI);
 }
+// Maps an angle in [-π, π] → bin index in [0, m_nb_angular_steps).
 unsigned int LidarStrat::angleToId(Angle a)
 {
     return (unsigned int)((a + M_PI) * double(m_nb_angular_steps) / (2 * M_PI))
@@ -51,6 +53,7 @@ void LidarStrat::updateLidarScan(const sensor_msgs::msg::LaserScan& new_scan)
 {
     updateCurrentPose();
     m_obstacle_dbg = new_scan;
+    // Reset all bins to max_distance so that missing returns don't leave stale obstacle data.
     std::fill(m_lidar_sensors_dists.begin(), m_lidar_sensors_dists.end(), m_max_distance);
     m_lidar_sensors_stamp = new_scan.header.stamp;
 
@@ -67,6 +70,7 @@ void LidarStrat::updateLidarScan(const sensor_msgs::msg::LaserScan& new_scan)
         }
         i++;
     }
+    // Snapshot the transform at scan time; the robot may have moved by the time run() executes.
     m_laser_to_map_at_last_lidar_scan = m_laser_to_map;
 }
 
@@ -82,6 +86,8 @@ unsigned int get_idx_of_max(const float vector[], const size_t len)
     return curr_max;
 }
 
+// Called when the overhead camera sends a batch of opponent poses detected via ArUco tags.
+// Converts absolute poses (map frame) to robot-relative polar positions.
 void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPoses)
 {
     m_aruco_obstacles.clear();
@@ -90,8 +96,8 @@ void LidarStrat::updateArucoObstacles(const geometry_msgs::msg::PoseArray& newPo
         Distance distance;
         PolarPosition other_robot(m_current_pose.getPosition() - pose.position);
 
-        // the center of the aruco is probably farther than the edge of the robot
-
+        // The ArUco tag is on top of the opponent's mast; shrink the distance by 20 cm
+        // so the obstacle represents the robot's edge rather than its center.
         distance = std::max(Distance(0), Distance(other_robot.getDistance() - 0.2));
 
         m_aruco_obstacles.emplace_back(distance, other_robot.getAngle());
@@ -269,36 +275,42 @@ void LidarStrat::closest_point_of_segment(const Distance x,
     }
 }
 
+// "In front" means within ±60° of the robot's forward direction (angle 0).
 bool is_in_front(Angle a)
 {
     return abs(AngleTools::diffAngle(a, Angle(0))) < AngleTools::deg2rad(AngleDeg(60));
 }
 
+// "In back" means within ±60° of the robot's backward direction (angle π).
 bool is_in_back(Angle a)
 {
     return abs(AngleTools::diffAngle(a, Angle(M_PI))) < AngleTools::deg2rad(AngleDeg(60));
 }
 
+// Returns the index of the most threatening obstacle in the given direction,
+// or -1 if the list is empty. "Most threatening" = lowest speed_inhibition value
+// (closest to 0 = must stop). Returns -1 if no obstacle qualifies.
 int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacles,
                                        float distanceCoeff,
                                        bool look_in_front)
 {
     int currentMostThreateningId = -1;
 
-    // 1) Find the distance to the most threatening obstacle and its relative position compared
-    // to the robot
+    // Higher initial value ensures any real obstacle will beat it.
     float currentMostThreateningSpeedInhibition = std::numeric_limits<float>::infinity();
 
     for (size_t i = 0; i < obstacles.size(); i++)
     {
         const auto& obstacle = obstacles[i];
-        // Only detect in front of the current direction
+        // Skip obstacles that are not in the direction we are looking.
         if ((!look_in_front && !is_in_back(obstacle.getAngle()))
             || (look_in_front && !is_in_front(obstacle.getAngle())))
         {
             continue;
         }
 
+        // For reverse gear, remap the angle so that "straight behind" becomes 0
+        // (i.e., most dangerous), matching the convention expected by speed_inhibition.
         Angle normalized_angle = look_in_front
                                    ? obstacles[i].getAngle()
                                    : AngleTools::wrapAngle(Angle(obstacles[i].getAngle() + M_PI));
@@ -315,8 +327,13 @@ int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacl
     return currentMostThreateningId;
 }
 
+// The game table is 3 m × 2 m, centred at the map origin.
+// We use slightly tighter bounds (1.45 / 0.95) to reject LiDAR returns
+// that hit obstacles outside the table (referees, team members, etc.) and would otherwise cause
+// unnecessary braking.
 bool LidarStrat::isInsideTable(const Position& input)
 {
+    // @todo 1.4 => 1.45. No idea why it is assymetric
     return input.getX() < 1.45 && input.getX() > -1.4 && input.getY() < 0.95
            && input.getY() > -0.95;
 }
@@ -428,12 +445,15 @@ void LidarStrat::run()
     updateCurrentPose();
     std::vector<PolarPosition> obstacles;
 
-    // Obstacles very far away, in case there is no obstacle.
+    // Sentinel obstacles placed infinitely far away in 4 directions so that
+    // computeMostThreatening always returns a valid index even when the field is clear.
     obstacles.push_back(PolarPosition(Distance(10000), Angle(0)));
     obstacles.push_back(PolarPosition(Distance(10000), Angle(90)));
     obstacles.push_back(PolarPosition(Distance(10000), Angle(180)));
     obstacles.push_back(PolarPosition(Distance(10000), Angle(270)));
 
+    // The field is symmetric: blue team plays on one side, yellow on the other.
+    // This coefficient flips X-coordinates of game-specific positions for the yellow team.
     int coeffIsBlue = 1;
     if (!m_is_blue) // todo: check si c'est pas l'inverse
     {
@@ -499,10 +519,12 @@ void LidarStrat::run()
                   m_lidar_sensors_angles[i]);
 
                 Position obs_local_with_offset(obs_polar_local);
-                Position obs_global_with_offset
+                [[maybe_unused]] Position obs_global_with_offset
                   = obs_local.transform(m_laser_to_map_at_last_lidar_scan);
 
-                // Enlarge the other robots' perimeter, as a margin of safety
+                // The LiDAR only sees the opponent's mast (a single point), but their robot
+                // body is much larger. We add 8 points evenly spread 20 cm around the detected
+                // point to approximate the opponent's footprint and trigger avoidance earlier.
                 const Distance l_rayon_robot_adverse = Distance(0.2);
                 std::vector<Position> l_tour_robot_adverse;
                 for (float l_angle = 0; l_angle < 2 * M_PI; l_angle += M_PI / 4)
@@ -519,15 +541,17 @@ void LidarStrat::run()
                     obstacles.push_back(l_point_tour_robot_adverse_in_baselink);
                 }
 
-                Position obs_in_baselink_with_offset = obs_global.transform(m_map_to_baselink);
+                [[maybe_unused]] Position obs_in_baselink_with_offset
+                  = obs_global.transform(m_map_to_baselink);
                 obstacles.push_back(obs_in_baselink);
             }
         }
     }
 
+    // --- ArUco obstacles (legacy overhead camera, not used since 2022) ---
     for (const auto& aruco_pose : m_arucos)
     {
-        // If the tag has been seen in the last two seconds
+        // Discard stale detections; a tag unseen for >2 s is no longer reliable.
         if (this->now() - aruco_pose.header.stamp > rclcpp::Duration(2, 0))
         {
             continue;
@@ -541,23 +565,28 @@ void LidarStrat::run()
         obstacles.push_back(closest_point);
     }
 
-    // end of dynamic obstacles => send them before adding static obstacles
+    // Dynamic obstacles (LiDAR + ArUco) are published here, before static ones are added,
+    // so that the dynamic_obstacles topic only reflects what the sensors actually see.
     if (this->now() > m_timeout_next_publish_dynamic_obst)
     {
-        // only send them at 1hz, it is quite heavy
+        // Rate-limited to 1 Hz because the PoseArray can be large.
         sendDynamicObstacles(obstacles);
         m_timeout_next_publish_dynamic_obst = this->now() + rclcpp::Duration(1, 0);
     }
 
+    // --- Static obstacles ---
+    // For each segment we compute the closest point to the robot and add it as an obstacle,
+    // so the robot slows down when approaching any wall or fixed game structure.
     std::vector<std::pair<Position, Position>> border_segments;
     std::vector<std::pair<Position, Position>> static_segments;
-    // Edges
+    // The four edges of the 3 m × 2 m table (map frame, centred at origin).
     border_segments.push_back(std::make_pair(Position({ -1.5, -1. }), Position({ -1.5, 1 })));
     border_segments.push_back(std::make_pair(Position({ -1.5, 1 }), Position({ 1.5, 1 })));
     border_segments.push_back(std::make_pair(Position({ 1.5, 1 }), Position({ 1.5, -1 })));
     border_segments.push_back(std::make_pair(Position({ 1.5, -1 }), Position({ -1.5, -1 })));
 
-    // 2025
+    // Game-specific fixed obstacles. Compiled in via the YEAR_XXXX macro defined at the top.
+    // Each year's competition has a different table layout with different structures to avoid.
 #ifdef YEAR_2025
     // Scène
     static_segments.push_back(
@@ -706,6 +735,11 @@ void LidarStrat::run()
 void LidarStrat::updateRemainingTime(builtin_interfaces::msg::Duration a_remaining_time_match)
 {
     m_remainig_time = rclcpp::Duration(a_remaining_time_match);
+
+#ifdef YEAR_2025
+    // A match lasts 100 s, but the robot only plays for 85s.
+    // After 82 s, we stop considering the "petite dépose" and "aire de départ" zones as obstacles,
+    // and try to score there as a last measure
     if (m_remainig_time.seconds() > 82)
     {
         petite_depose_coin_activated = false;
@@ -713,4 +747,5 @@ void LidarStrat::updateRemainingTime(builtin_interfaces::msg::Duration a_remaini
         aire_de_depart_vers_publique_activated = false;
         aire_de_depart_cote_loin_activated = false;
     }
+#endif
 }
