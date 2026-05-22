@@ -333,8 +333,7 @@ int LidarStrat::computeMostThreatening(const std::vector<PolarPosition>& obstacl
 // unnecessary braking.
 bool LidarStrat::isInsideTable(const Position& input)
 {
-    // @todo 1.4 => 1.45. No idea why it is assymetric
-    return input.getX() < 1.45 && input.getX() > -1.4 && input.getY() < 0.95
+    return input.getX() < 1.45 && input.getX() > -1.45 && input.getY() < 0.95
            && input.getY() > -0.95;
 }
 
