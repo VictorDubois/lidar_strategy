@@ -48,3 +48,11 @@ From the green points, are selected:
 `ros2 launch lidar_strategy lidar_strat_launch.py`
 
 or usually, as part of [Krabi bringup](https://github.com/VictorDubois/krabi/blob/main/krabi_bringup/launch/krabi_main_launch.py)
+
+# What to do for a new year?
+
+Once the official rules for a new year of Eurobot are available, the tasks are:
+- [Mandatory] define the static obstacles, [see here for 2026](https://github.com/search?q=repo%3AVictorDubois%2Flidar_strategy+defined%28YEAR_2026%29&type=code)
+- [Optional] define zones to activate/deactivate/change the priority based on whether the other robto has been there. ex:
+    - [in 2025](https://github.com/VictorDubois/lidar_strategy/blob/d31d567f61ba2a71b4844f6958a3e79efc0669dc/src/lidarStrat.cpp#L471), forbid going throw a zone where another robot has potentially dropped a construction
+    - most years, lower the priority of resource zones where the other robot has already been (in 2026, it would have been nice to avoid trying to get noisettes if the other robot has already gotten them)
