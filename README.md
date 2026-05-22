@@ -9,6 +9,7 @@ Pointcloud from a lidar, to detect obstalces (type: [LaserScan](https://docs.ros
 
 ### aruco_obstacles
 Poses of arUco tags on top of opponents robots (type: [PoseArray](https://docs.ros2.org/foxy/api/geometry_msgs/msg/PoseArray.html)). This was sent by the camera above the paly area in 2020/2022, but is not used anymore. Could be used again.
+
 ### remaining_time
 The remaining time in the match, in seconds (type: [Duration](https://docs.ros2.org/foxy/api/builtin_interfaces/msg/Duration.html))
 
@@ -25,8 +26,8 @@ Visualization (rviz/foxglove) of obstacles considered by the robot, both static 
 
 ### dynamic_obstacles
 The poses of the obstacles built from what the lidar sees. (type: [PoseArray](https://docs.ros2.org/foxy/api/geometry_msgs/msg/PoseArray.html)). There are two differences from scan_obstacles:
-    - The points outside of the table are excluded, see [isInsideTable](https://github.com/search?q=repo%3AVictorDubois/lidar_strategy%20LidarStrat%3A%3AisInsideTable&type=code)
-    - The opponent's robot is reconstructed. We consider that each point seen by the lidar is just the mast, and the real robot is much larger => 8 points are added 20cm around the lidar impact. See [l_rayon_robot_adverse](https://github.com/search?q=repo%3AVictorDubois%2Flidar_strategy%20l_rayon_robot_adverse&type=code))
+  - The points outside of the table are excluded, see [isInsideTable](https://github.com/search?q=repo%3AVictorDubois/lidar_strategy%20LidarStrat%3A%3AisInsideTable&type=code)
+  - The opponent's robot is reconstructed. We consider that each point seen by the lidar is just the mast, and the real robot is much larger => 8 points are added 20cm around the lidar impact. See [l_rayon_robot_adverse](https://github.com/search?q=repo%3AVictorDubois%2Flidar_strategy%20l_rayon_robot_adverse&type=code))
 
 # Visualization
 <img width="1123" height="857" alt="image" src="https://github.com/user-attachments/assets/a9137e0a-d07d-4fe7-8811-9279cc8cb531" />
@@ -39,6 +40,8 @@ The poses of the obstacles built from what the lidar sees. (type: [PoseArray](ht
 From the green points, are selected:
 - Red: obstable_pose_stamped
 - Yellow: obstable_behind_pose_stamped
+
+=> only those two are sent to main_strategy
 
 # How to launch
 `ros2 launch lidar_strategy lidar_strat_launch.py`
