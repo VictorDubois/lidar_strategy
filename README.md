@@ -35,7 +35,7 @@ The poses of the obstacles built from what the lidar sees. (type: [PoseArray](ht
 - Krabi is the red/green/blue arrows on the left
 - Pink: scan_obstacles
 - Cyan: edges of the area, part of obstacle_debug
-- arrows on the bottom right: dynamic_obstacles (from the lidar points inside the table)
+- arrows on the bottom right: dynamic_obstacles (from the lidar points inside the table) (it is the big blob on the bottom right, there are also green points and pink squares on top)
 - Green: obstacles considered (one per edge in Cyan + dynamic obstacles), part of obstacle_debug
 
 From the green points, are selected:
