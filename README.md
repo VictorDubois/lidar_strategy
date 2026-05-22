@@ -30,8 +30,9 @@ The poses of the obstacles built from what the lidar sees. (type: [PoseArray](ht
   - The opponent's robot is reconstructed. We consider that each point seen by the lidar is just the mast, and the real robot is much larger => 8 points are added 20cm around the lidar impact. See [l_rayon_robot_adverse](https://github.com/search?q=repo%3AVictorDubois%2Flidar_strategy%20l_rayon_robot_adverse&type=code))
 
 # Visualization
-<img width="1123" height="857" alt="image" src="https://github.com/user-attachments/assets/a9137e0a-d07d-4fe7-8811-9279cc8cb531" />
+<img width="1322" height="800" alt="image" src="https://github.com/user-attachments/assets/db5610a6-62d4-447d-bf9a-c040f21c7849" />
 
+- Krabi is the red/green/blue arrows on the left
 - Pink: scan_obstacles
 - Cyan: edges of the area, part of obstacle_debug
 - arrows on the bottom right: dynamic_obstacles (from the lidar points inside the table)
