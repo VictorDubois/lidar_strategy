@@ -25,7 +25,7 @@
   <build_depend>krabi_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
   <build_depend>krabilib</build_depend>
-  
+  <build_depend>diagnostic_updater</build_depend>  
 
   <build_export_depend>rclcpp</build_export_depend>
   <build_export_depend>rclpy</build_export_depend>
@@ -38,7 +38,7 @@
   <build_export_depend>tf2_geometry_msgs</build_export_depend>
   <build_export_depend>krabi_msgs</build_export_depend>
   <build_export_depend>visualization_msgs</build_export_depend>
-
+  <build_export_depend>diagnostic_updater</build_export_depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
   <exec_depend>rclcpp</exec_depend>
@@ -53,7 +53,7 @@
   <exec_depend>krabi_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>ros2launch</exec_depend>
-
+  <exec_depend>diagnostic_updater</exec_depend>
 
   <member_of_group>rosidl_interface_packages</member_of_group>
   <test_depend>ament_lint_auto</test_depend>
